@@ -11,11 +11,27 @@ export default defineConfig(({mode}) => {
       react(), 
       tailwindcss(),
       VitePWA({
+        injectRegister: 'auto',
         registerType: 'autoUpdate',
         workbox: {
+          cleanupOutdatedCaches: true,
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/blogger\.googleusercontent\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'blogger-images',
+                expiration: {
+                  maxEntries: 50,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
             {
               urlPattern: /^https:\/\/picsum\.photos\/.*/i,
               handler: 'CacheFirst',
@@ -29,29 +45,15 @@ export default defineConfig(({mode}) => {
                   statuses: [0, 200],
                 },
               },
-            },
-            {
-              urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'unsplash-images',
-                expiration: {
-                  maxEntries: 20,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
             }
           ]
         },
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+        includeAssets: [],
         manifest: {
           id: '/',
           name: 'SGS Coaching',
           short_name: 'SGS Coaching',
-          description: 'SGS School Management and Learning App',
+          description: 'SGS Coaching Management and Learning App',
           theme_color: '#0021ff',
           background_color: '#ffffff',
           display: 'standalone',

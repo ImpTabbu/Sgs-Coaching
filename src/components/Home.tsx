@@ -5,7 +5,7 @@ import 'swiper/css';
 import 'swiper/css/effect-fade';
 import 'swiper/css/pagination';
 import { TEACHERS } from '@/src/constants';
-import { UserCheck, Building2, BookOpen, Trophy, Send, Loader2, Sparkles, Heart, Phone, MapPin, ArrowRight, PlayCircle, FileText, Award, Bell, Instagram, Facebook } from 'lucide-react';
+import { UserCheck, Building2, BookOpen, Trophy, Send, Loader2, Sparkles, Heart, Phone, MapPin, ArrowRight, PlayCircle, FileText, Award, Bell, Instagram, Facebook, X } from 'lucide-react';
 import { SuccessModal } from './SuccessModal';
 import { googleSheetsService } from '../services/googleSheetsService';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,6 +40,7 @@ export const Home: React.FC = () => {
   const [socialLinks, setSocialLinks] = useState<any[]>([]);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -50,19 +51,27 @@ export const Home: React.FC = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+    // Always show install button if not in standalone mode
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallButton(true);
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShowInstallButton(false);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallButton(false);
+      }
+      setDeferredPrompt(null);
+    } else {
+      setShowInstallGuide(true);
     }
-    setDeferredPrompt(null);
   };
 
   useEffect(() => {
@@ -154,7 +163,7 @@ export const Home: React.FC = () => {
                 <Sparkles size={20} />
               </div>
               <div className="space-y-0.5">
-                <p className="text-sm font-bold text-slate-800">Install Our App</p>
+                <p className="text-sm font-bold text-slate-800">Download Our App</p>
                 <p className="text-[10px] text-slate-500 font-medium">Get faster access and offline support</p>
               </div>
             </div>
@@ -162,9 +171,61 @@ export const Home: React.FC = () => {
               onClick={handleInstallClick}
               className="bg-brand-primary text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all active:scale-95"
             >
-              Install
+              Download
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Install Guide Modal */}
+      <AnimatePresence>
+        {showInstallGuide && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 w-full max-w-sm space-y-6 shadow-2xl"
+            >
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black text-slate-900">How to Install</h3>
+                  <p className="text-xs text-slate-500 font-medium">Follow these steps to add to your phone</p>
+                </div>
+                <button 
+                  onClick={() => setShowInstallGuide(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X size={20} className="text-slate-400" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center font-black shrink-0">1</div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-slate-800">Android (Chrome)</p>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">Tap the <span className="font-bold text-slate-700">3 dots</span> in the top right corner and select <span className="font-bold text-emerald-600">"Install App"</span> or "Add to Home Screen".</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-black shrink-0">2</div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-slate-800">iPhone (Safari)</p>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">Tap the <span className="font-bold text-slate-700">Share button</span> (square with arrow) at the bottom and select <span className="font-bold text-blue-600">"Add to Home Screen"</span>.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowInstallGuide(false)}
+                className="w-full bg-slate-900 text-white p-4 rounded-2xl font-black hover:bg-black transition-all shadow-lg"
+              >
+                Got it!
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
       {/* Hero Section / Director Intro */}
