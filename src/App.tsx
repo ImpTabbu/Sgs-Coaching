@@ -135,15 +135,76 @@ export default function App() {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('username');
     localStorage.removeItem('userRole');
-    setActiveTab('home');
+    handleTabChange('home');
   };
 
-  const handleTabChange = (tab: Tab) => {
+  const handleTabChange = (tab: Tab, pushState = true) => {
     setActiveTab(tab);
     sessionStorage.setItem('lastActiveTab', tab);
+    
+    if (pushState) {
+      window.history.pushState({ type: 'tab', tab }, '', '');
+    }
+    
+    // Close menus when tab changes
     setIsSideMenuOpen(false);
     setIsGameMenuOpen(false);
   };
+
+  // Helper to open menus with history support
+  const toggleSideMenu = (open: boolean) => {
+    setIsSideMenuOpen(open);
+    if (open) {
+      window.history.pushState({ type: 'menu', menu: 'side' }, '', '');
+    }
+  };
+
+  const toggleGameMenu = (open: boolean) => {
+    setIsGameMenuOpen(open);
+    if (open) {
+      window.history.pushState({ type: 'menu', menu: 'game' }, '', '');
+    }
+  };
+
+  const openClassModal = (mode: 'study' | 'toppers') => {
+    setModalMode(mode);
+    setIsClassModalOpen(true);
+    window.history.pushState({ type: 'modal', modal: 'class' }, '', '');
+  };
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state;
+      
+      // Close everything first
+      setIsSideMenuOpen(false);
+      setIsGameMenuOpen(false);
+      setIsClassModalOpen(false);
+
+      if (state) {
+        if (state.type === 'tab') {
+          setActiveTab(state.tab);
+        } else if (state.type === 'menu' || state.type === 'modal') {
+          // If we went back to a menu/modal state, it means we should probably close it 
+          // (which we already did above), but we might need to ensure the tab is correct.
+          // In a real app, we'd track the tab in these states too.
+        }
+      } else {
+        setActiveTab('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    // Initial state
+    if (!window.history.state) {
+      window.history.replaceState({ type: 'tab', tab: activeTab }, '', '');
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   const handleEditFromViewer = (item: any, type: string) => {
     setInitialEdit({ item, type });
@@ -406,7 +467,7 @@ export default function App() {
           )}
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setIsSideMenuOpen(true)}
+              onClick={() => toggleSideMenu(true)}
               className="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center active:bg-slate-100 transition-colors"
             >
               <Menu size={20} />
@@ -417,7 +478,7 @@ export default function App() {
             </div>
           </div>
           <button 
-            onClick={() => setIsGameMenuOpen(true)}
+            onClick={() => toggleGameMenu(true)}
             className="w-10 h-10 bg-brand-primary/10 text-brand-primary rounded-xl flex items-center justify-center active:bg-brand-primary/20 transition-colors"
           >
             <Puzzle size={20} />
@@ -441,14 +502,14 @@ export default function App() {
                   <Study 
                     selectedLevel={selectedLevel} 
                     selectedClass={selectedClass} 
-                    onOpenModal={() => openModal('study')} 
+                    onOpenModal={() => openClassModal('study')} 
                     onSelectSubject={handleSubjectSelect}
                   />
                 )}
                 {activeTab === 'toppers' && (
                   <Toppers 
                     selectedClass={selectedClass} 
-                    onOpenModal={() => openModal('toppers')} 
+                    onOpenModal={() => openClassModal('toppers')} 
                     sheetConfig={sheetConfig}
                   />
                 )}
@@ -486,7 +547,7 @@ export default function App() {
                     selectedLevel={selectedLevel} 
                     selectedClass={selectedClass} 
                     selectedSubject={selectedSubject}
-                    onBack={() => handleTabChange('study')}
+                    onBack={() => window.history.back()}
                     isAdmin={canAccessAdmin}
                     onEdit={(item) => handleEditFromViewer(item, 'study')}
                     sheetConfig={sheetConfig}
@@ -497,7 +558,7 @@ export default function App() {
                     <PrePrimaryViewer 
                       classname={selectedClass}
                       subject={selectedSubject}
-                      onClose={() => handleTabChange('study')}
+                      onClose={() => window.history.back()}
                       sheetConfig={sheetConfig}
                       savedDrawingsRef={savedDrawingsRef}
                     />
