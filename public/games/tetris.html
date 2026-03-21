@@ -1,0 +1,1307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tetris Game</title>
+    <!-- FontAwesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      /* Reset and base styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        background-color: #1e1e1e;
+        color: #ffffff;
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .game-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: auto;
+        max-height: 100vh;
+        width: 100%;
+        max-width: 600px;
+        padding: 16px;
+        gap: 16px;
+        position: relative;
+      }
+
+      /* Game Board Container */
+      .game-board-container {
+        display: flex;
+        flex-direction: column;
+        height: 95%;
+        align-items: center;
+        position: relative;
+        background-color: #2a2a2a;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow:
+          4px 4px 12px rgba(0, 0, 0, 0.3),
+          -4px -4px 12px rgba(255, 255, 255, 0.02);
+        touch-action: none;
+        user-select: none;
+        cursor: pointer;
+      }
+
+      /* Info Section - At top of game board container */
+      .info-section {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        margin-bottom: 16px;
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .info-card {
+        background-color: #333333;
+        border-radius: 12px;
+        padding: 10px 12px;
+        text-align: center;
+        box-shadow:
+          2px 2px 6px rgba(0, 0, 0, 0.3),
+          -2px -2px 6px rgba(255, 255, 255, 0.02);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-height: 70px;
+        flex: 1;
+        min-width: 100px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .info-card:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          4px 4px 8px rgba(0, 0, 0, 0.4),
+          -4px -4px 8px rgba(255, 255, 255, 0.03);
+      }
+
+      .info-card.refresh-card:active {
+        transform: translateY(1px);
+        box-shadow:
+          inset 2px 2px 4px rgba(0, 0, 0, 0.3),
+          inset -2px -2px 4px rgba(255, 255, 255, 0.02);
+      }
+
+      .info-label {
+        font-size: 10px;
+        font-weight: 600;
+        color: #888888;
+        letter-spacing: 1px;
+      }
+
+      .score-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .refresh-icon {
+        font-size: 28px;
+        color: #ffffff;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .refresh-icon:hover {
+        transform: rotate(180deg);
+      }
+
+      /* Game Board - Increased base size */
+      .game-board {
+        display: grid;
+        grid-template-columns: repeat(10, 28px);
+        grid-template-rows: repeat(20, 28px);
+        gap: 1px;
+        background-color: #1a1a1a;
+        padding: 12px;
+        border-radius: 12px;
+        box-shadow:
+          inset 4px 4px 8px rgba(0, 0, 0, 0.5),
+          inset -4px -4px 8px rgba(255, 255, 255, 0.03);
+        position: relative;
+        cursor: pointer;
+      }
+
+      .game-cell {
+        width: 28px;
+        height: 28px;
+        border-radius: 2px;
+        transition: all 0.1s ease;
+      }
+
+      .game-cell.empty {
+        background-color: #1a1a1a;
+      }
+
+      /* Tetris piece colors */
+      .game-cell.red {
+        background-color: #ff4757;
+        box-shadow:
+          0 2px 4px rgba(255, 71, 87, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      .game-cell.yellow {
+        background-color: #feca57;
+        box-shadow:
+          0 2px 4px rgba(254, 202, 87, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      .game-cell.blue {
+        background-color: #3742fa;
+        box-shadow:
+          0 2px 4px rgba(55, 66, 250, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      .game-cell.green {
+        background-color: #2ed573;
+        box-shadow:
+          0 2px 4px rgba(46, 213, 115, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      /* Falling piece glow effect */
+      .game-cell.falling {
+        box-shadow:
+          0 0 12px currentColor,
+          0 2px 4px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      /* Controls - HIDDEN */
+      .controls {
+        display: none;
+      }
+
+      .neumorphic-btn {
+        background-color: #2a2a2a;
+        border: none;
+        border-radius: 50%;
+        color: #ffffff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.1s ease;
+        box-shadow:
+          4px 4px 8px rgba(0, 0, 0, 0.3),
+          -4px -4px 8px rgba(255, 255, 255, 0.02);
+        user-select: none;
+      }
+
+      .neumorphic-btn:active {
+        box-shadow:
+          inset 2px 2px 4px rgba(0, 0, 0, 0.3),
+          inset -2px -2px 4px rgba(255, 255, 255, 0.02);
+        transform: translateY(1px);
+      }
+
+      .circle-container {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        background-color: #2a2a2a;
+        box-shadow:
+          4px 4px 8px rgba(0, 0, 0, 0.3),
+          -4px -4px 8px rgba(255, 255, 255, 0.02);
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .circle-container .arrow-btn {
+        position: absolute;
+        width: 42px;
+        height: 42px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .circle-container .up-btn {
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .circle-container .down-btn {
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .circle-container .left-btn {
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .circle-container .right-btn {
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      /* Game over overlay */
+      .game-over-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        backdrop-filter: blur(4px);
+        z-index: 10;
+      }
+
+      .game-over-text {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .restart-btn {
+        background-color: #2a2a2a;
+        border: none;
+        border-radius: 8px;
+        color: #ffffff;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow:
+          4px 4px 8px rgba(0, 0, 0, 0.3),
+          -4px -4px 8px rgba(255, 255, 255, 0.02);
+        transition: all 0.1s ease;
+      }
+
+      .restart-btn:active {
+        box-shadow:
+          inset 2px 2px 4px rgba(0, 0, 0, 0.3),
+          inset -2px -2px 4px rgba(255, 255, 255, 0.02);
+      }
+
+      /* Pause overlay */
+      .pause-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        pointer-events: none;
+        z-index: 5;
+      }
+
+      .pause-text {
+        font-size: 24px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Swipe instructions */
+      .swipe-instructions {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        color: #666;
+        text-align: center;
+        pointer-events: none;
+        opacity: 0.7;
+      }
+
+      /* Mobile responsive - Much larger sizes for better mobile experience */
+      @media (max-width: 768px) {
+        .game-container {
+          max-width: 100%;
+          padding: 12px;
+          gap: 12px;
+        }
+
+        .game-board-container {
+          width: 100%;
+          max-width: 500px;
+        }
+
+        .info-section {
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .info-card {
+          min-height: 60px;
+          padding: 8px 10px;
+          min-width: 80px;
+        }
+
+        .score-value {
+          font-size: 20px;
+        }
+
+        .refresh-icon {
+          font-size: 24px;
+        }
+
+        .game-board {
+          grid-template-columns: repeat(10, 32px);
+          grid-template-rows: repeat(20, 32px);
+          padding: 12px;
+        }
+
+        .game-cell {
+          width: 32px;
+          height: 32px;
+        }
+
+        .circle-container {
+          width: 140px;
+          height: 140px;
+        }
+
+        .circle-container .arrow-btn {
+          width: 36px;
+          height: 36px;
+          font-size: 12px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .game-container {
+          padding: 10px;
+          gap: 10px;
+        }
+
+        .game-board-container {
+          max-width: 420px;
+        }
+
+        .game-board {
+          grid-template-columns: repeat(10, 30px);
+          grid-template-rows: repeat(20, 30px);
+          padding: 12px;
+        }
+
+        .game-cell {
+          width: 30px;
+          height: 30px;
+        }
+
+        .info-section {
+          gap: 6px;
+          margin-bottom: 10px;
+        }
+
+        .info-card {
+          padding: 6px 8px;
+          min-height: 50px;
+          min-width: 70px;
+        }
+
+        .score-value {
+          font-size: 18px;
+        }
+
+        .refresh-icon {
+          font-size: 20px;
+        }
+
+        .circle-container {
+          width: 120px;
+          height: 120px;
+        }
+
+        .circle-container .arrow-btn {
+          width: 32px;
+          height: 32px;
+          font-size: 11px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .game-container {
+          padding: 8px;
+          gap: 8px;
+        }
+
+        .game-board-container {
+          max-width: 360px;
+        }
+
+        .game-board {
+          grid-template-columns: repeat(10, 28px);
+          grid-template-rows: repeat(20, 28px);
+          padding: 10px;
+        }
+
+        .game-cell {
+          width: 28px;
+          height: 28px;
+        }
+
+        .info-section {
+          gap: 4px;
+          margin-bottom: 8px;
+        }
+
+        .info-card {
+          padding: 4px 6px;
+          min-height: 45px;
+          min-width: 60px;
+        }
+
+        .score-value {
+          font-size: 16px;
+        }
+
+        .refresh-icon {
+          font-size: 18px;
+        }
+
+        .circle-container {
+          width: 100px;
+          height: 100px;
+        }
+
+        .circle-container .arrow-btn {
+          width: 28px;
+          height: 28px;
+          font-size: 10px;
+        }
+
+        .circle-container .up-btn {
+          top: 8px;
+        }
+
+        .circle-container .down-btn {
+          bottom: 8px;
+        }
+
+        .circle-container .left-btn {
+          left: 8px;
+        }
+
+        .circle-container .right-btn {
+          right: 8px;
+        }
+      }
+
+      /* Landscape mobile optimization */
+      @media (max-height: 600px) and (orientation: landscape) {
+        .game-container {
+          flex-direction: row;
+          justify-content: center;
+          align-items: center;
+          gap: 16px;
+          padding: 8px;
+          max-width: 100%;
+        }
+
+        .game-board-container {
+          flex-direction: row;
+          max-width: none;
+        }
+
+        .info-section {
+          flex-direction: column;
+          margin-bottom: 0;
+          margin-right: 12px;
+          gap: 6px;
+        }
+
+        .info-card {
+          min-width: 80px;
+          min-height: 45px;
+        }
+
+        .game-board {
+          grid-template-columns: repeat(10, 18px);
+          grid-template-rows: repeat(20, 18px);
+          padding: 8px;
+        }
+
+        .game-cell {
+          width: 18px;
+          height: 18px;
+        }
+
+        .controls {
+          margin-top: 0;
+          margin-left: 12px;
+        }
+
+        .circle-container {
+          width: 100px;
+          height: 100px;
+        }
+
+        .circle-container .arrow-btn {
+          width: 28px;
+          height: 28px;
+          font-size: 10px;
+        }
+      }
+      
+      .copyright {
+        position: absolute;
+        bottom: 10px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 12px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-container">
+      <!-- Game Board Container with Info at top -->
+      <div class="game-board-container" id="gameBoardContainer">
+        <!-- Info Section -->
+        <div class="info-section">
+          <div class="info-card">
+            <div class="info-label">SCORE</div>
+            <div class="score-value" id="scoreValue">0</div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-label">HIGH SCORE</div>
+            <div class="score-value" id="highScoreValue">0</div>
+          </div>
+
+          <div
+            class="info-card refresh-card"
+            id="refreshCard"
+            title="Restart Game"
+          >
+            <div class="info-label">RESTART</div>
+            <div class="refresh-icon">
+              <i class="fas fa-redo-alt"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="game-board" id="gameBoard"></div>
+
+        <div class="swipe-instructions">
+          Swipe: ↑ Rotate, ↓ Drop, ← → Move, Tap: Pause/Resume
+        </div>
+      </div>
+
+      <!-- Controls - HIDDEN -->
+      <div class="controls">
+        <div class="circle-container">
+          <button class="arrow-btn neumorphic-btn up-btn" id="rotateBtn">
+            <span>↑</span>
+          </button>
+          <button class="arrow-btn neumorphic-btn left-btn" id="leftBtn">
+            <span>←</span>
+          </button>
+          <button class="arrow-btn neumorphic-btn right-btn" id="rightBtn">
+            <span>→</span>
+          </button>
+          <button class="arrow-btn neumorphic-btn down-btn" id="downBtn">
+            <span>↓</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="copyright">© SGS Coaching</div>
+
+    <script>
+      class TetrisGame {
+        constructor() {
+          this.board = Array(20)
+            .fill()
+            .map(() => Array(10).fill(0));
+          this.currentPiece = null;
+          this.score = 0;
+          this.highScore = this.loadHighScore();
+          this.linesCleared = 0;
+          this.gameRunning = false;
+          this.isPaused = false;
+          this.dropTime = 0;
+          this.dropInterval = 1000;
+          this.lastFrameTime = 0;
+          this.pauseOverlay = null;
+
+          this.pieces = [
+            // I piece
+            {
+              shape: [[1, 1, 1, 1]],
+              color: "blue",
+              rotations: [[[1, 1, 1, 1]], [[1], [1], [1], [1]]],
+            },
+            // O piece
+            {
+              shape: [
+                [1, 1],
+                [1, 1],
+              ],
+              color: "yellow",
+              rotations: [
+                [
+                  [1, 1],
+                  [1, 1],
+                ],
+              ],
+            },
+            // T piece
+            {
+              shape: [
+                [0, 1, 0],
+                [1, 1, 1],
+              ],
+              color: "red",
+              rotations: [
+                [
+                  [0, 1, 0],
+                  [1, 1, 1],
+                ],
+                [
+                  [1, 0],
+                  [1, 1],
+                  [1, 0],
+                ],
+                [
+                  [1, 1, 1],
+                  [0, 1, 0],
+                ],
+                [
+                  [0, 1],
+                  [1, 1],
+                  [0, 1],
+                ],
+              ],
+            },
+            // S piece
+            {
+              shape: [
+                [0, 1, 1],
+                [1, 1, 0],
+              ],
+              color: "green",
+              rotations: [
+                [
+                  [0, 1, 1],
+                  [1, 1, 0],
+                ],
+                [
+                  [1, 0],
+                  [1, 1],
+                  [0, 1],
+                ],
+              ],
+            },
+            // Z piece
+            {
+              shape: [
+                [1, 1, 0],
+                [0, 1, 1],
+              ],
+              color: "red",
+              rotations: [
+                [
+                  [1, 1, 0],
+                  [0, 1, 1],
+                ],
+                [
+                  [0, 1],
+                  [1, 1],
+                  [1, 0],
+                ],
+              ],
+            },
+            // J piece
+            {
+              shape: [
+                [1, 0, 0],
+                [1, 1, 1],
+              ],
+              color: "blue",
+              rotations: [
+                [
+                  [1, 0, 0],
+                  [1, 1, 1],
+                ],
+                [
+                  [1, 1],
+                  [1, 0],
+                  [1, 0],
+                ],
+                [
+                  [1, 1, 1],
+                  [0, 0, 1],
+                ],
+                [
+                  [0, 1],
+                  [0, 1],
+                  [1, 1],
+                ],
+              ],
+            },
+            // L piece
+            {
+              shape: [
+                [0, 0, 1],
+                [1, 1, 1],
+              ],
+              color: "yellow",
+              rotations: [
+                [
+                  [0, 0, 1],
+                  [1, 1, 1],
+                ],
+                [
+                  [1, 0],
+                  [1, 0],
+                  [1, 1],
+                ],
+                [
+                  [1, 1, 1],
+                  [1, 0, 0],
+                ],
+                [
+                  [1, 1],
+                  [0, 1],
+                  [0, 1],
+                ],
+              ],
+            },
+          ];
+
+          this.init();
+        }
+
+        loadHighScore() {
+          const saved = localStorage.getItem("tetrisHighScore");
+          return saved ? parseInt(saved) : 0;
+        }
+
+        saveHighScore() {
+          localStorage.setItem("tetrisHighScore", this.highScore.toString());
+        }
+
+        updateHighScore() {
+          if (this.score > this.highScore) {
+            this.highScore = this.score;
+            this.saveHighScore();
+          }
+        }
+
+        restartGame() {
+          // Reset game state
+          this.board = Array(20)
+            .fill()
+            .map(() => Array(10).fill(0));
+          this.currentPiece = null;
+          this.score = 0;
+          this.linesCleared = 0;
+          this.gameRunning = false;
+          this.isPaused = false;
+          this.dropTime = 0;
+          this.dropInterval = 1000;
+          this.lastFrameTime = 0;
+
+          // Remove any existing overlays
+          this.hidePauseOverlay();
+          const existingOverlay = document.querySelector(".game-over-overlay");
+          if (existingOverlay) {
+            existingOverlay.remove();
+          }
+
+          // Restart the game
+          this.spawnPiece();
+          this.updateDisplay();
+          this.gameRunning = true;
+          this.lastFrameTime = Date.now();
+          this.gameLoop();
+        }
+
+        init() {
+          this.createBoard();
+          this.bindEvents();
+          this.spawnPiece();
+          this.updateDisplay();
+          this.gameRunning = true;
+          this.lastFrameTime = Date.now();
+          this.gameLoop();
+        }
+
+        createBoard() {
+          const gameBoard = document.getElementById("gameBoard");
+          gameBoard.innerHTML = "";
+
+          for (let row = 0; row < 20; row++) {
+            for (let col = 0; col < 10; col++) {
+              const cell = document.createElement("div");
+              cell.className = "game-cell empty";
+              cell.dataset.row = row;
+              cell.dataset.col = col;
+              gameBoard.appendChild(cell);
+            }
+          }
+        }
+
+        bindEvents() {
+          // ONLY the refresh card can restart the game
+          const refreshCard = document.getElementById("refreshCard");
+
+          refreshCard.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.restartGame();
+          });
+
+          refreshCard.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.restartGame();
+          });
+
+          // Game board container click - ONLY pause/unpause
+          const gameBoardContainer =
+            document.getElementById("gameBoardContainer");
+          gameBoardContainer.addEventListener("click", (e) => {
+            // Don't trigger if clicking on refresh card
+            if (e.target.closest("#refreshCard")) {
+              return;
+            }
+
+            // Only pause/unpause, never restart
+            if (this.gameRunning) {
+              e.preventDefault();
+              e.stopPropagation();
+              this.togglePause();
+            }
+          });
+
+          // Keyboard controls - NO RESTART KEY
+          document.addEventListener("keydown", (e) => {
+            if (!this.gameRunning) return;
+
+            switch (e.code) {
+              case "ArrowLeft":
+                e.preventDefault();
+                if (!this.isPaused) this.movePiece(-1, 0);
+                break;
+              case "ArrowRight":
+                e.preventDefault();
+                if (!this.isPaused) this.movePiece(1, 0);
+                break;
+              case "ArrowDown":
+                e.preventDefault();
+                if (!this.isPaused) this.movePiece(0, 1);
+                break;
+              case "ArrowUp":
+              case "Space":
+                e.preventDefault();
+                if (!this.isPaused) this.rotatePiece();
+                break;
+              case "KeyP":
+                e.preventDefault();
+                this.togglePause();
+                break;
+            }
+          });
+
+          // Button controls - NO RESTART FUNCTIONALITY
+          document.getElementById("leftBtn").addEventListener("click", () => {
+            if (this.gameRunning && !this.isPaused) this.movePiece(-1, 0);
+          });
+
+          document.getElementById("rightBtn").addEventListener("click", () => {
+            if (this.gameRunning && !this.isPaused) this.movePiece(1, 0);
+          });
+
+          document.getElementById("downBtn").addEventListener("click", () => {
+            if (this.gameRunning && !this.isPaused) this.movePiece(0, 1);
+          });
+
+          document.getElementById("rotateBtn").addEventListener("click", () => {
+            if (this.gameRunning && !this.isPaused) this.rotatePiece();
+          });
+
+          // Touch controls for mobile - NO RESTART, only game controls
+          this.addTouchControls();
+        }
+
+        addTouchControls() {
+          const gameBoard = document.getElementById("gameBoard");
+          let touchStartX = 0;
+          let touchStartY = 0;
+          let touchStartTime = 0;
+          const minSwipeDistance = 30;
+          const maxTapTime = 300;
+
+          gameBoard.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+          });
+
+          gameBoard.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            if (!this.gameRunning) return;
+
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndTime = Date.now();
+
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const touchDuration = touchEndTime - touchStartTime;
+
+            // Check if it's a tap (short duration and small movement)
+            if (
+              touchDuration < maxTapTime &&
+              Math.abs(deltaX) < 15 &&
+              Math.abs(deltaY) < 15
+            ) {
+              // Simple tap - pause/unpause
+              this.togglePause();
+              return;
+            }
+
+            // If game is paused, don't process other gestures
+            if (this.isPaused) return;
+
+            // Determine swipe direction
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+              // Horizontal swipe
+              if (Math.abs(deltaX) > minSwipeDistance) {
+                if (deltaX > 0) {
+                  this.movePiece(1, 0); // Right swipe
+                } else {
+                  this.movePiece(-1, 0); // Left swipe
+                }
+              }
+            } else {
+              // Vertical swipe
+              if (Math.abs(deltaY) > minSwipeDistance) {
+                if (deltaY > 0) {
+                  this.movePiece(0, 1); // Down swipe
+                } else {
+                  this.rotatePiece(); // Up swipe
+                }
+              }
+            }
+          });
+
+          // Prevent scrolling on the game board
+          gameBoard.addEventListener("touchmove", (e) => {
+            e.preventDefault();
+          });
+        }
+
+        getRandomPiece() {
+          const piece =
+            this.pieces[Math.floor(Math.random() * this.pieces.length)];
+          return {
+            shape: piece.rotations[0],
+            color: piece.color,
+            rotations: piece.rotations,
+            currentRotation: 0,
+            x:
+              Math.floor(10 / 2) - Math.floor(piece.rotations[0][0].length / 2),
+            y: 0,
+          };
+        }
+
+        spawnPiece() {
+          this.currentPiece = this.getRandomPiece();
+
+          if (
+            !this.isValidPosition(
+              this.currentPiece,
+              this.currentPiece.x,
+              this.currentPiece.y,
+            )
+          ) {
+            this.gameOver();
+          }
+        }
+
+        isValidPosition(piece, newX, newY) {
+          for (let row = 0; row < piece.shape.length; row++) {
+            for (let col = 0; col < piece.shape[row].length; col++) {
+              if (piece.shape[row][col]) {
+                const boardX = newX + col;
+                const boardY = newY + row;
+
+                if (boardX < 0 || boardX >= 10 || boardY >= 20) {
+                  return false;
+                }
+
+                if (boardY >= 0 && this.board[boardY][boardX]) {
+                  return false;
+                }
+              }
+            }
+          }
+          return true;
+        }
+
+        movePiece(deltaX, deltaY) {
+          const newX = this.currentPiece.x + deltaX;
+          const newY = this.currentPiece.y + deltaY;
+
+          if (this.isValidPosition(this.currentPiece, newX, newY)) {
+            this.currentPiece.x = newX;
+            this.currentPiece.y = newY;
+            this.updateDisplay();
+            return true;
+          }
+
+          if (deltaY > 0) {
+            // Piece can't move down, lock it
+            this.lockPiece();
+          }
+
+          return false;
+        }
+
+        rotatePiece() {
+          const rotations = this.currentPiece.rotations;
+          const nextRotation =
+            (this.currentPiece.currentRotation + 1) % rotations.length;
+          const rotatedPiece = {
+            ...this.currentPiece,
+            shape: rotations[nextRotation],
+            currentRotation: nextRotation,
+          };
+
+          if (
+            this.isValidPosition(rotatedPiece, rotatedPiece.x, rotatedPiece.y)
+          ) {
+            this.currentPiece = rotatedPiece;
+            this.updateDisplay();
+          }
+        }
+
+        hardDrop() {
+          // Move the piece down until it can't move anymore
+          while (this.movePiece(0, 1)) {
+            // Keep moving down
+          }
+          this.lockPiece();
+        }
+
+        lockPiece() {
+          // Add current piece to board
+          for (let row = 0; row < this.currentPiece.shape.length; row++) {
+            for (
+              let col = 0;
+              col < this.currentPiece.shape[row].length;
+              col++
+            ) {
+              if (this.currentPiece.shape[row][col]) {
+                const boardY = this.currentPiece.y + row;
+                const boardX = this.currentPiece.x + col;
+                if (boardY >= 0) {
+                  this.board[boardY][boardX] = this.currentPiece.color;
+                }
+              }
+            }
+          }
+
+          this.clearLines();
+          this.spawnPiece();
+          this.updateDisplay();
+        }
+
+        clearLines() {
+          let linesCleared = 0;
+
+          for (let row = 19; row >= 0; row--) {
+            if (this.board[row].every((cell) => cell !== 0)) {
+              this.board.splice(row, 1);
+              this.board.unshift(Array(10).fill(0));
+              linesCleared++;
+              row++; // Check same row again
+            }
+          }
+
+          if (linesCleared > 0) {
+            this.linesCleared += linesCleared;
+            // Score increases by 1 for each line cleared
+            this.score += linesCleared;
+
+            // Update high score if necessary
+            this.updateHighScore();
+
+            // Increase speed slightly with more lines cleared
+            this.dropInterval = Math.max(
+              100,
+              1000 - Math.floor(this.linesCleared / 5) * 50,
+            );
+          }
+        }
+
+        updateDisplay() {
+          // Update game board
+          const cells = document.querySelectorAll(".game-cell");
+          cells.forEach((cell) => {
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            cell.className = "game-cell";
+
+            if (this.board[row][col]) {
+              cell.classList.add(this.board[row][col]);
+            } else {
+              cell.classList.add("empty");
+            }
+          });
+
+          // Draw current piece
+          if (this.currentPiece) {
+            for (let row = 0; row < this.currentPiece.shape.length; row++) {
+              for (
+                let col = 0;
+                col < this.currentPiece.shape[row].length;
+                col++
+              ) {
+                if (this.currentPiece.shape[row][col]) {
+                  const boardY = this.currentPiece.y + row;
+                  const boardX = this.currentPiece.x + col;
+
+                  if (
+                    boardY >= 0 &&
+                    boardY < 20 &&
+                    boardX >= 0 &&
+                    boardX < 10
+                  ) {
+                    const cell = document.querySelector(
+                      `[data-row="${boardY}"][data-col="${boardX}"]`,
+                    );
+                    cell.className = `game-cell ${this.currentPiece.color} falling`;
+                  }
+                }
+              }
+            }
+          }
+
+          // Update score and high score display
+          document.getElementById("scoreValue").textContent = this.score;
+          document.getElementById("highScoreValue").textContent =
+            this.highScore;
+        }
+
+        togglePause() {
+          this.isPaused = !this.isPaused;
+
+          if (this.isPaused) {
+            this.showPauseOverlay();
+          } else {
+            this.hidePauseOverlay();
+            // Reset the last frame time to prevent large time jumps
+            this.lastFrameTime = Date.now();
+          }
+        }
+
+        showPauseOverlay() {
+          if (this.pauseOverlay) return;
+
+          this.pauseOverlay = document.createElement("div");
+          this.pauseOverlay.className = "pause-overlay";
+          this.pauseOverlay.innerHTML = '<div class="pause-text">PAUSED</div>';
+          document
+            .querySelector(".game-board-container")
+            .appendChild(this.pauseOverlay);
+        }
+
+        hidePauseOverlay() {
+          if (this.pauseOverlay) {
+            this.pauseOverlay.remove();
+            this.pauseOverlay = null;
+          }
+        }
+
+        gameOver() {
+          this.gameRunning = false;
+          this.updateHighScore();
+
+          const overlay = document.createElement("div");
+          overlay.className = "game-over-overlay";
+          overlay.innerHTML = `
+            <div class="game-over-text">GAME OVER</div>
+            <div style="margin-bottom: 8px; font-size: 16px;">Score: ${this.score}</div>
+            <div style="margin-bottom: 12px; font-size: 14px; color: #feca57;">High Score: ${this.highScore}</div>
+            <button class="restart-btn" onclick="window.tetrisGame.restartGame()">RESTART</button>
+          `;
+
+          document.querySelector(".game-board-container").appendChild(overlay);
+        }
+
+        gameLoop() {
+          if (!this.gameRunning) return;
+
+          const currentTime = Date.now();
+          const deltaTime = currentTime - this.lastFrameTime;
+          this.lastFrameTime = currentTime;
+
+          if (!this.isPaused) {
+            this.dropTime += deltaTime;
+
+            if (this.dropTime > this.dropInterval) {
+              this.movePiece(0, 1);
+              this.dropTime = 0;
+            }
+          }
+
+          requestAnimationFrame(() => this.gameLoop());
+        }
+      }
+
+      // Start the game when page loads
+      document.addEventListener("DOMContentLoaded", () => {
+        window.tetrisGame = new TetrisGame();
+      });
+    </script>
+  </body>
+</html>
