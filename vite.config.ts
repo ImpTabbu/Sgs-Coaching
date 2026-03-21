@@ -48,10 +48,10 @@ export default defineConfig(({mode}) => {
         },
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
-          name: 'SGS School App',
-          short_name: 'SGS App',
+          name: 'SGS Coaching',
+          short_name: 'SGS Coaching',
           description: 'SGS School Management and Learning App',
-          theme_color: '#4f46e5',
+          theme_color: '#0021ff',
           background_color: '#ffffff',
           display: 'standalone',
           orientation: 'portrait',
@@ -59,19 +59,19 @@ export default defineConfig(({mode}) => {
           start_url: '/',
           icons: [
             {
-              src: 'https://picsum.photos/seed/school/192/192',
+              src: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjqBtUkq3GaWuBFlHDa9tXyVPjdOtjFFJQJxBtlR55lER7dnGHhkrDXgByZs5x990inb5w_FMhxQnewWBI6Zw3doN9Fzy7wKGR-NF-AA8qyakolVWrwjpvmJaktjiyK_OJTGX4HDBlooulzV6o0Wz1kBAYwnxzHCAdE5Gxp6tSJr1RNE5kzWGXy0Ho-gFs/s1600/SGS%20App%20Logo-modified.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: 'https://picsum.photos/seed/school/512/512',
+              src: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjqBtUkq3GaWuBFlHDa9tXyVPjdOtjFFJQJxBtlR55lER7dnGHhkrDXgByZs5x990inb5w_FMhxQnewWBI6Zw3doN9Fzy7wKGR-NF-AA8qyakolVWrwjpvmJaktjiyK_OJTGX4HDBlooulzV6o0Wz1kBAYwnxzHCAdE5Gxp6tSJr1RNE5kzWGXy0Ho-gFs/s1600/SGS%20App%20Logo-modified.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: 'https://picsum.photos/seed/school/512/512',
+              src: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjqBtUkq3GaWuBFlHDa9tXyVPjdOtjFFJQJxBtlR55lER7dnGHhkrDXgByZs5x990inb5w_FMhxQnewWBI6Zw3doN9Fzy7wKGR-NF-AA8qyakolVWrwjpvmJaktjiyK_OJTGX4HDBlooulzV6o0Wz1kBAYwnxzHCAdE5Gxp6tSJr1RNE5kzWGXy0Ho-gFs/s1600/SGS%20App%20Logo-modified.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable'
