@@ -54,16 +54,27 @@ export default defineConfig(({mode}) => {
           theme_color: '#4f46e5',
           background_color: '#ffffff',
           display: 'standalone',
+          orientation: 'portrait',
+          scope: '/',
+          start_url: '/',
           icons: [
             {
               src: 'https://picsum.photos/seed/school/192/192',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
             },
             {
               src: 'https://picsum.photos/seed/school/512/512',
               sizes: '512x512',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: 'https://picsum.photos/seed/school/512/512',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
             }
           ]
         }
