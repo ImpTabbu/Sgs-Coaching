@@ -48,6 +48,7 @@ export default defineConfig(({mode}) => {
         },
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
+          id: '/',
           name: 'SGS Coaching',
           short_name: 'SGS Coaching',
           description: 'SGS School Management and Learning App',
@@ -77,6 +78,9 @@ export default defineConfig(({mode}) => {
               purpose: 'maskable'
             }
           ]
+        },
+        devOptions: {
+          enabled: true
         }
       })
     ],
