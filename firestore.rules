@@ -48,9 +48,13 @@ service cloud.firestore {
       return request.resource.data.keys().hasAll(fields);
     }
 
+    function isValidString(field, maxLen) {
+      return request.resource.data[field] is string && request.resource.data[field].size() <= maxLen;
+    }
+
     function isValidUser(data) {
-      return data.email is string && 
-             data.name is string && 
+      return data.email is string && data.email.size() <= 100 &&
+             data.name is string && data.name.size() <= 100 &&
              data.role in ['student', 'teacher', 'admin'] && 
              data.active is bool;
     }
@@ -61,19 +65,14 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      // Anyone authenticated can read user profiles (needed for app functionality like checking roles)
-      // In a stricter app, we might restrict this, but currently the app fetches all users in AdminPanel
       allow read: if isAuthenticated();
       
-      // Users can create their own profile, but cannot make themselves admin or active
       allow create: if isAuthenticated() && 
                     isValidUser(request.resource.data) && 
                     request.resource.data.uid == request.auth.uid &&
-                    (request.resource.data.role in ['student', 'teacher'] || isAdmin()) &&
+                    (request.resource.data.role == 'student' || isAdmin()) &&
                     (request.resource.data.active == false || isAdmin());
                     
-      // Only admins can update other users (e.g., to activate them or change roles)
-      // Users can update their own profile (except role, active status, and uid)
       allow update: if isAuthenticated() && 
                     isValidUser(request.resource.data) && 
                     (
@@ -89,31 +88,34 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Generic rule for admin-only write collections with size limits
+    function isAdminWriteValid(maxTitleLen, maxContentLen) {
+      return isAdmin() && 
+             (!('title' in request.resource.data) || isValidString('title', maxTitleLen)) &&
+             (!('content' in request.resource.data) || isValidString('content', maxContentLen));
+    }
+
     // Test Results collection
     match /testResults/{resultId} {
-      // Users can read their own results, admins can read all
-      allow read: if isAuthenticated();
-      
-      // Users can create their own results
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      
-      // Only admins can update or delete results
+      allow read: if isAuthenticated() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && 
+                    request.resource.data.score is number;
       allow update, delete: if isAdmin();
     }
 
-    // Public content collections (Read for authenticated, Admin write)
-    match /notifications/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /gallery/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /studyMaterials/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /toppers/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /tests/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /testQuestions/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /noticeBoard/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /prePrimaryContent/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /kahanis/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    // Public content collections
+    match /notifications/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 2000); }
+    match /gallery/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 1000); }
+    match /studyMaterials/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 1000); }
+    match /toppers/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 500); }
+    match /tests/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 500); }
+    match /testQuestions/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(500, 2000); }
+    match /noticeBoard/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 5000); }
+    match /prePrimaryContent/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 1000); }
+    match /kahanis/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 10000); }
     match /appSettings/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /teachers/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /teachers/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 1000); }
     match /socialLinks/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /successStories/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /successStories/{id} { allow read: if isAuthenticated(); allow write: if isAdminWriteValid(200, 2000); }
   }
 }

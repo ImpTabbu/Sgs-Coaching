@@ -332,7 +332,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           isFromSheet: false
         })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
       } else if (activeTab === 'pre_primary') {
-        const prePrimaryContentData = await firebaseService.fetchCollection('PrePrimaryContent');
+        const prePrimaryContentData = await firebaseService.fetchCollection('prePrimaryContent');
         setPrePrimaryContent(prePrimaryContentData.map((item: any) => ({
           id: item.id,
           className: item.classname,
@@ -582,7 +582,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
         'test_questions': 'TestQuestions',
         'test_results': 'TestResults',
         'notice_board': 'NoticeBoard',
-        'pre_primary_content': 'PrePrimaryContent',
+        'pre_primary_content': 'prePrimaryContent',
         'kahanis': 'Kahanis'
       };
       const tabName = tabMap[colName] || colName;

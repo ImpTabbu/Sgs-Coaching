@@ -33,13 +33,16 @@ export const PrePrimaryViewer: React.FC<PrePrimaryViewerProps> = ({ classname, s
 
       setLoading(true);
       try {
-        const data = await firebaseService.fetchCollection('PrePrimaryContent');
-        console.log('Fetched PrePrimaryContent:', data); // Debug log
+        const data = await firebaseService.fetchCollection('prePrimaryContent');
+        console.log('Fetched prePrimaryContent:', data); // Debug log
+        
+        const normalize = (str: string) => (str || '').toString().replace(/\./g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+        
         const found = data.find((item: any) => {
-          const itemClass = (item.classname || item.className || '').toString().trim().toLowerCase();
-          const targetClass = (classname || '').toString().trim().toLowerCase();
-          const itemSubject = (item.subject || item.Subject || '').toString().trim().toLowerCase();
-          const targetSubject = (subject || '').toString().trim().toLowerCase();
+          const itemClass = normalize(item.classname || item.className || '');
+          const targetClass = normalize(classname || '');
+          const itemSubject = normalize(item.subject || item.Subject || '');
+          const targetSubject = normalize(subject || '');
           
           return itemClass === targetClass && itemSubject === targetSubject;
         });

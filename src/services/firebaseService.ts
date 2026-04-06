@@ -1,4 +1,4 @@
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { 
   collection, 
   getDocs, 
@@ -12,6 +12,57 @@ import {
   getDoc,
   onSnapshot
 } from 'firebase/firestore';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: any, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 export interface AppData {
   notifications: any[];
@@ -45,6 +96,7 @@ class FirebaseService {
       'TestQuestions': 'testQuestions',
       'TestResults': 'testResults',
       'NoticeBoard': 'noticeBoard',
+      'prePrimaryContent': 'prePrimaryContent',
       'Kahanis': 'kahanis',
       'AppBasicSettings': 'appSettings',
       'Teachers': 'teachers',
@@ -52,14 +104,12 @@ class FirebaseService {
       'SuccessStories': 'successStories'
     };
     
-    // Return the mapped name if it exists, otherwise return the tabName itself
-    // This allows for both lowercase and original case collections
     return map[tabName] || tabName;
   }
 
   async fetchCollection(tabName: string): Promise<any[]> {
+    const colName = this.getCollectionName(tabName);
     try {
-      const colName = this.getCollectionName(tabName);
       const q = query(collection(db, colName));
       const querySnapshot = await getDocs(q);
       
@@ -68,7 +118,6 @@ class FirebaseService {
         data.push({ id: doc.id, ...doc.data() });
       });
       
-      // Sort by createdat if it exists (descending)
       data.sort((a, b) => {
         if (a.createdat && b.createdat) {
           return new Date(b.createdat).getTime() - new Date(a.createdat).getTime();
@@ -77,22 +126,23 @@ class FirebaseService {
       });
 
       return data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        handleFirestoreError(error, OperationType.LIST, colName);
+      }
       console.error(`Error fetching collection ${tabName}:`, error);
       return [];
     }
   }
 
   async writeToCollection(action: 'add' | 'update' | 'delete', tabName: string, data: any): Promise<{ success: boolean; message: string }> {
+    const colName = this.getCollectionName(tabName);
     try {
-      const colName = this.getCollectionName(tabName);
-      
       if (action === 'add') {
         const docData = {
           ...data,
           createdat: data.createdat || new Date().toISOString()
         };
-        // Remove id if it exists to let Firestore auto-generate
         delete docData.id; 
         await addDoc(collection(db, colName), docData);
         return { success: true, message: 'Data added successfully.' };
@@ -101,7 +151,7 @@ class FirebaseService {
         if (!data.id) throw new Error("Document ID is required for update");
         const docRef = doc(db, colName, data.id);
         const updateData = { ...data };
-        delete updateData.id; // Don't save the id field inside the document
+        delete updateData.id;
         await updateDoc(docRef, updateData);
         return { success: true, message: 'Data updated successfully.' };
       } 
@@ -113,6 +163,9 @@ class FirebaseService {
       
       return { success: false, message: 'Invalid action.' };
     } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        handleFirestoreError(error, OperationType.WRITE, colName);
+      }
       console.error(`Error writing to collection ${tabName}:`, error);
       return { success: false, message: error.message || 'Failed to write to database.' };
     }
@@ -130,7 +183,7 @@ class FirebaseService {
       this.fetchCollection('Toppers'),
       this.fetchCollection('Users'),
       this.fetchCollection('NoticeBoard'),
-      this.fetchCollection('PrePrimaryContent'),
+      this.fetchCollection('prePrimaryContent'),
       this.fetchCollection('Kahanis'),
       this.fetchCollection('AppBasicSettings'),
       this.fetchCollection('Teachers'),

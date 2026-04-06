@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from 'motion/react';
 export default function App() {
   const { user, isLoggedIn, isPending, authLoading, isAuthReady, logout } = useAuth();
   const { 
+    handleTabChange,
     activeTab, 
     isClassModalOpen, 
     setIsClassModalOpen, 
@@ -173,7 +174,7 @@ export default function App() {
                     selectedLevel={selectedLevel} 
                     selectedClass={selectedClass} 
                     selectedSubject={selectedSubject}
-                    onBack={() => window.history.back()}
+                    onBack={() => handleTabChange('study')}
                     isAdmin={canAccessAdmin}
                     sheetConfig={sheetConfig}
                   />
@@ -182,7 +183,7 @@ export default function App() {
                   <PrePrimaryViewer 
                     classname={selectedClass} 
                     subject={selectedSubject}
-                    onClose={() => window.history.back()}
+                    onClose={() => handleTabChange('study')}
                     savedDrawingsRef={savedDrawingsRef}
                     sheetConfig={sheetConfig}
                   />
@@ -190,7 +191,7 @@ export default function App() {
                 {activeTab === 'story_collection' && (
                   <StoryCollection 
                     selectedClass={selectedClass} 
-                    onBack={() => window.history.back()}
+                    onBack={() => handleTabChange('study')}
                     isAdmin={canAccessAdmin}
                     sheetConfig={sheetConfig}
                   />
@@ -200,7 +201,9 @@ export default function App() {
           </div>
         </main>
 
-        <BottomNav />
+        {!['study_content', 'pre_primary_viewer', 'story_collection'].includes(activeTab) && (
+          <BottomNav />
+        )}
 
         {isClassModalOpen && (
           <ClassModal 
