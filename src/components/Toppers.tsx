@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, GraduationCap, ChevronRight, Award, X, Calendar, Loader2 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
@@ -34,17 +34,27 @@ export const Toppers: React.FC<ToppersProps> = ({ selectedClass, onOpenModal, sh
   const [toppers, setToppers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTopper, setSelectedTopper] = useState<any | null>(null);
+  const [topperBanner, setTopperBanner] = useState<string>('');
 
   useEffect(() => {
     const fetchToppers = async () => {
       setLoading(true);
       
-      if (sheetConfig?.enabled && sheetConfig.id) {
-        try {
-          const sheetData = await googleSheetsService.fetchSheetData('Toppers');
+      try {
+        const [appSettings, toppersData] = await Promise.all([
+          firebaseService.fetchCollection('AppBasicSettings'),
+          firebaseService.fetchCollection('Toppers')
+        ]);
+        const generalSettings = appSettings?.find((s: any) => s.id === 'general');
+        if (generalSettings?.topperBanner) {
+          setTopperBanner(generalSettings.topperBanner);
+        }
+
+        if (sheetConfig?.enabled && sheetConfig.id) {
+          const sheetData = toppersData || [];
           const mappedSheetData = sheetData.filter((t: any) => 
             (t.classname || '').toString() === (selectedClass || '').toString()
-          ).map((item, index) => ({
+          ).map((item: any, index: number) => ({
             id: `sheet-topper-${index}`,
             name: item.name || 'Unknown',
             className: item.classname || '',
@@ -54,14 +64,13 @@ export const Toppers: React.FC<ToppersProps> = ({ selectedClass, onOpenModal, sh
             createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
             isFromSheet: true,
           }));
-          setToppers(mappedSheetData.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-        } catch (err) {
-          console.error('Error fetching sheet data:', err);
-        } finally {
-          setLoading(false);
+          setToppers(mappedSheetData.sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+        } else {
+          setToppers([]);
         }
-      } else {
-        setToppers([]);
+      } catch (err) {
+        console.error('Error fetching toppers data:', err);
+      } finally {
         setLoading(false);
       }
     };
@@ -73,6 +82,15 @@ export const Toppers: React.FC<ToppersProps> = ({ selectedClass, onOpenModal, sh
     <div className="p-6 space-y-8 bg-background min-h-screen pb-24 pt-6">
       {/* Hero Section */}
       <div className="space-y-6">
+        {topperBanner && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full h-40 md:h-56 rounded-3xl overflow-hidden shadow-lg border border-slate-100"
+          >
+            <img src={topperBanner} alt="Topper Banner" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          </motion.div>
+        )}
         <div className="flex justify-between items-start">
           <div className="space-y-1">
             <h1 className="text-3xl font-display font-bold text-slate-900">Our Toppers</h1>

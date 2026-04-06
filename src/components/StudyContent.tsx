@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, FileText, ExternalLink, Calendar, ArrowLeft, Loader2, Trash2, Edit, Database, RefreshCw, ChevronRight, FileDown } from 'lucide-react';
 import { PdfViewer } from './PdfViewer';
 import { ConfirmModal } from './ConfirmModal';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { ChapterPopup } from './ChapterPopup';
@@ -54,7 +54,7 @@ export const StudyContent: React.FC<StudyContentProps> = ({ selectedLevel, selec
     
     if (sheetConfig?.enabled && sheetConfig.id) {
       try {
-        const sheetData = await googleSheetsService.fetchSheetData('StudyMaterials');
+        const sheetData = await firebaseService.fetchCollection('StudyMaterials');
         const mappedSheetData = sheetData.filter((m: any) => 
           (m.level || '').toLowerCase() === (selectedLevel || '').toLowerCase() && 
           (m.classname || '').toString() === (selectedClass || '').toString() &&
@@ -75,8 +75,7 @@ export const StudyContent: React.FC<StudyContentProps> = ({ selectedLevel, selec
             readUrl: item.readurl || '',
             homeworkUrls: parsedHomework,
             createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-            isFromSheet: true,
-            _rowIndex: item._rowIndex
+            isFromSheet: false
           };
         }).sort((a, b) => a.createdAt.toDate().getTime() - b.createdAt.toDate().getTime());
         setMaterials(mappedSheetData);
@@ -137,10 +136,6 @@ export const StudyContent: React.FC<StudyContentProps> = ({ selectedLevel, selec
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!sheetConfig?.scriptUrl) {
-      alert('Google Sheets data cannot be deleted from the app without a Script URL. Please delete it from the spreadsheet.');
-      return;
-    }
     setDeleteId(id);
     setIsConfirmOpen(true);
   };
@@ -149,8 +144,8 @@ export const StudyContent: React.FC<StudyContentProps> = ({ selectedLevel, selec
     if (!deleteId) return;
     try {
       const item = materials.find(m => m.id === deleteId);
-      if (item && item._rowIndex) {
-        const result = await googleSheetsService.writeToSheet('delete', 'StudyMaterials', { _rowIndex: item._rowIndex });
+      if (item && item.id) {
+        const result = await firebaseService.writeToCollection('delete', 'StudyMaterials', { id: item.id });
         if (result.success) {
           fetchMaterials();
         } else {

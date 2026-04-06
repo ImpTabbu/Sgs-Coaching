@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Phone, Mail, MapPin, Youtube, Instagram, Facebook, MessageCircle, ExternalLink, PhoneCall } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -24,17 +24,22 @@ const itemVariants = {
 export const Contact: React.FC = () => {
   const [contactImage, setContactImage] = useState('https://picsum.photos/seed/contact/800/400');
   const [socialLinks, setSocialLinks] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const data = await googleSheetsService.getAllData();
-        const settings = data.appSettings || [];
-        const imgSetting = settings.find((s: any) => s.settingkey === 'contact_image' || s.key === 'contact_image');
-        if (imgSetting) {
-          setContactImage(imgSetting.settingvalue || imgSetting.value);
+        const [appSettings, socialLinksData] = await Promise.all([
+          firebaseService.fetchCollection('AppBasicSettings'),
+          firebaseService.fetchCollection('SocialLinks')
+        ]);
+        const generalSettings = appSettings?.find((s: any) => s.id === 'general');
+        setSettings(generalSettings || null);
+        
+        if (generalSettings?.contact_image) {
+          setContactImage(generalSettings.contact_image);
         }
-        setSocialLinks(data.socialLinks || []);
+        setSocialLinks(socialLinksData || []);
       } catch (err) {
         console.error("Failed to fetch contact data:", err);
       }
@@ -86,7 +91,7 @@ export const Contact: React.FC = () => {
               </div>
               <div className="space-y-0.5">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Phone Number</p>
-                <p className="text-sm font-bold text-slate-800">+91 8953208909</p>
+                <p className="text-sm font-bold text-slate-800">{settings?.contactPhone || '+91 8953208909'}</p>
               </div>
             </motion.div>
 
@@ -96,7 +101,7 @@ export const Contact: React.FC = () => {
               </div>
               <div className="space-y-0.5">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Email Address</p>
-                <p className="text-sm font-bold text-slate-800 break-all">sgsworkvikas@gmail.com</p>
+                <p className="text-sm font-bold text-slate-800 break-all">{settings?.contactEmail || 'sgsworkvikas@gmail.com'}</p>
               </div>
             </motion.div>
 
@@ -107,7 +112,7 @@ export const Contact: React.FC = () => {
               <div className="space-y-0.5">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Location</p>
                 <p className="text-xs font-bold text-slate-800 leading-relaxed">
-                  In front of Panchayat Bhavan, Sukhariganj, Ambedkarnagar, UP-224168, India
+                  {settings?.contactAddress || 'In front of Panchayat Bhavan, Sukhariganj, Ambedkarnagar, UP-224168, India'}
                 </p>
               </div>
             </motion.div>
@@ -117,7 +122,7 @@ export const Contact: React.FC = () => {
           <motion.a 
             variants={itemVariants}
             whileTap={{ scale: 0.95 }}
-            href="tel:+918953208909"
+            href={`tel:${settings?.contactPhone || '+918953208909'}`}
             className="w-full bg-brand-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-sm hover:shadow-md transition-shadow"
           >
             <PhoneCall size={20} /> Call Now

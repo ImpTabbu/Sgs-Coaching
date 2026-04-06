@@ -24,15 +24,6 @@
         --shadow-color: rgba(0, 255, 136, 0.2);
       }
 
-      .sidebar-container.sidebar-invisible {
-        display: none;
-      }
-
-      .Blog .blog-posts .post-outer-container:last-child {
-        background: #191919;
-        border-radius: 20px;
-      }
-
       body {
         display: flex;
         justify-content: center;
@@ -103,7 +94,6 @@
         background: var(--primary-hover);
       }
 
-      /* Mobile Controls */
       .mobile-controls {
         display: none;
         grid-template-areas:
@@ -127,24 +117,11 @@
         border-radius: 12px;
       }
 
-      .mobile-controls button:active {
-        background: var(--primary-hover);
-      }
+      .up { grid-area: up; }
+      .down { grid-area: down; }
+      .left { grid-area: left; }
+      .right { grid-area: right; }
 
-      .up {
-        grid-area: up;
-      }
-      .down {
-        grid-area: down;
-      }
-      .left {
-        grid-area: left;
-      }
-      .right {
-        grid-area: right;
-      }
-
-      /* Popup Styles */
       .popup {
         position: fixed;
         top: 50%;
@@ -161,42 +138,11 @@
         max-width: 400px;
       }
 
-      .popup h2 {
-        margin-bottom: 20px;
-        color: var(--primary-color);
-        font-size: 24px;
-      }
+      .hidden { display: none; }
 
-      .hidden {
-        display: none;
-      }
-
-      /* Mobile Responsiveness */
       @media (max-width: 768px) {
-        .container {
-          margin-top: 20px;
-          gap: 1px;
-        }
-
-        .mobile-controls {
-          display: grid;
-        }
-
-        canvas {
-          max-height: 45vh;
-          margin-bottom: 10px;
-        }
-
-        .game-info {
-          flex-direction: row;
-          justify-content: space-between;
-          margin-bottom: 5px;
-        }
-
-        .game-info p {
-          font-size: 14px;
-          padding: 8px 15px;
-        }
+        .mobile-controls { display: grid; }
+        canvas { max-height: 45vh; }
       }
       
       .copyright {
@@ -237,12 +183,9 @@
       <p>You've completed all levels!</p>
       <button id="playAgain">Play Again</button>
     </div>
-    <div id="gameOverPopup" class="popup game-over hidden">
+    <div id="gameOverPopup" class="popup hidden">
       <h2>Game Over! 💔</h2>
       <p>Time's up! Better luck next time.</p>
-      <div class="timer-display">
-        <span id="finalTimeDisplay"></span>
-      </div>
       <button id="tryAgain">Try Again</button>
     </div>
 
@@ -253,18 +196,13 @@
           this.ctx = canvas.getContext("2d");
           this.resizeCanvas();
           this.size = 15;
-          this.cellSize =
-            Math.min(this.canvas.width, this.canvas.height) / this.size;
+          this.cellSize = Math.min(this.canvas.width, this.canvas.height) / this.size;
           this.playerPos = { x: 0, y: 0 };
           this.maze = [];
           this.startTime = null;
           this.timerInterval = null;
           this.currentLevel = 1;
-          this.timeLimits = {
-            1: 60,
-            2: 55,
-            3: 50,
-          };
+          this.timeLimits = { 1: 60, 2: 55, 3: 50 };
           this.timeLimit = this.timeLimits[1];
 
           this.initializeMaze();
@@ -273,25 +211,20 @@
 
           window.addEventListener("resize", () => {
             this.resizeCanvas();
-            this.cellSize =
-              Math.min(this.canvas.width, this.canvas.height) / this.size;
+            this.cellSize = Math.min(this.canvas.width, this.canvas.height) / this.size;
             this.drawMaze();
           });
         }
 
         resizeCanvas() {
           const container = this.canvas.parentElement;
-          const maxSize = Math.min(
-            container.clientWidth - 40,
-            window.innerHeight * 0.5,
-          );
+          const maxSize = Math.min(container.clientWidth - 40, window.innerHeight * 0.5);
           this.canvas.width = maxSize;
           this.canvas.height = maxSize;
         }
 
         setupControls() {
           document.addEventListener("keydown", (e) => this.handleKeyPress(e));
-
           const buttons = document.querySelectorAll(".mobile-controls button");
           buttons.forEach((button) => {
             button.addEventListener("touchstart", (e) => {
@@ -300,47 +233,16 @@
             });
           });
 
-          let touchStartX = 0;
-          let touchStartY = 0;
-
-          this.canvas.addEventListener("touchstart", (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-          });
-
-          this.canvas.addEventListener("touchmove", (e) => {
-            e.preventDefault();
-          });
-
-          this.canvas.addEventListener("touchend", (e) => {
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = touchEndY - touchStartY;
-
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-              if (deltaX > 50) this.handleMobileControl("right");
-              else if (deltaX < -50) this.handleMobileControl("left");
-            } else {
-              if (deltaY > 50) this.handleMobileControl("down");
-              else if (deltaY < -50) this.handleMobileControl("up");
-            }
-          });
-
           document.getElementById("nextLevel").addEventListener("click", () => {
             document.getElementById("winPopup").classList.add("hidden");
             this.currentLevel++;
-            document.getElementById("level-display").textContent =
-              `Level: ${this.currentLevel}`;
+            document.getElementById("level-display").textContent = `Level: ${this.currentLevel}`;
             this.timeLimit = this.timeLimits[this.currentLevel];
             this.start();
           });
 
           document.getElementById("playAgain").addEventListener("click", () => {
-            document
-              .getElementById("gameCompletePopup")
-              .classList.add("hidden");
+            document.getElementById("gameCompletePopup").classList.add("hidden");
             this.currentLevel = 1;
             document.getElementById("level-display").textContent = "Level: 1";
             this.timeLimit = this.timeLimits[1];
@@ -355,41 +257,13 @@
 
         handleMobileControl(direction) {
           if (!this.startTime) return;
-
           const currentCell = this.maze[this.playerPos.y][this.playerPos.x];
           let moved = false;
-
-          switch (direction) {
-            case "up":
-              if (!currentCell.walls[0] && this.playerPos.y > 0) {
-                this.playerPos.y--;
-                moved = true;
-              }
-              break;
-            case "right":
-              if (!currentCell.walls[1] && this.playerPos.x < this.size - 1) {
-                this.playerPos.x++;
-                moved = true;
-              }
-              break;
-            case "down":
-              if (!currentCell.walls[2] && this.playerPos.y < this.size - 1) {
-                this.playerPos.y++;
-                moved = true;
-              }
-              break;
-            case "left":
-              if (!currentCell.walls[3] && this.playerPos.x > 0) {
-                this.playerPos.x--;
-                moved = true;
-              }
-              break;
-          }
-
-          if (moved) {
-            this.drawMaze();
-            this.checkWin();
-          }
+          if (direction.includes("up") && !currentCell.walls[0]) { this.playerPos.y--; moved = true; }
+          else if (direction.includes("right") && !currentCell.walls[1]) { this.playerPos.x++; moved = true; }
+          else if (direction.includes("down") && !currentCell.walls[2]) { this.playerPos.y++; moved = true; }
+          else if (direction.includes("left") && !currentCell.walls[3]) { this.playerPos.x--; moved = true; }
+          if (moved) { this.drawMaze(); this.checkWin(); }
         }
 
         initializeMaze() {
@@ -397,48 +271,22 @@
           for (let i = 0; i < this.size; i++) {
             this.maze[i] = [];
             for (let j = 0; j < this.size; j++) {
-              this.maze[i][j] = {
-                visited: false,
-                walls: [true, true, true, true],
-              };
+              this.maze[i][j] = { visited: false, walls: [true, true, true, true] };
             }
           }
         }
 
         generateMaze(x, y) {
           this.maze[y][x].visited = true;
-          const directions = [
-            [0, -1],
-            [1, 0],
-            [0, 1],
-            [-1, 0],
-          ];
+          const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]];
           directions.sort(() => Math.random() - 0.5);
-
           for (const [dx, dy] of directions) {
-            const newX = x + dx;
-            const newY = y + dy;
-
-            if (
-              newX >= 0 &&
-              newX < this.size &&
-              newY >= 0 &&
-              newY < this.size &&
-              !this.maze[newY][newX].visited
-            ) {
-              if (dx === 1) {
-                this.maze[y][x].walls[1] = false;
-                this.maze[newY][newX].walls[3] = false;
-              } else if (dx === -1) {
-                this.maze[y][x].walls[3] = false;
-                this.maze[newY][newX].walls[1] = false;
-              } else if (dy === 1) {
-                this.maze[y][x].walls[2] = false;
-                this.maze[newY][newX].walls[0] = false;
-              } else if (dy === -1) {
-                this.maze[y][x].walls[0] = false;
-                this.maze[newY][newX].walls[2] = false;
-              }
+            const newX = x + dx; const newY = y + dy;
+            if (newX >= 0 && newX < this.size && newY >= 0 && newY < this.size && !this.maze[newY][newX].visited) {
+              if (dx === 1) { this.maze[y][x].walls[1] = false; this.maze[newY][newX].walls[3] = false; }
+              else if (dx === -1) { this.maze[y][x].walls[3] = false; this.maze[newY][newX].walls[1] = false; }
+              else if (dy === 1) { this.maze[y][x].walls[2] = false; this.maze[newY][newX].walls[0] = false; }
+              else if (dy === -1) { this.maze[y][x].walls[0] = false; this.maze[newY][newX].walls[2] = false; }
               this.generateMaze(newX, newY);
             }
           }
@@ -446,184 +294,77 @@
 
         drawMaze() {
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
           this.ctx.strokeStyle = "#00ff88";
           this.ctx.lineWidth = 2;
-
           for (let y = 0; y < this.size; y++) {
             for (let x = 0; x < this.size; x++) {
-              const cell = this.maze[y][x];
-              const startX = x * this.cellSize;
-              const startY = y * this.cellSize;
-
+              const cell = this.maze[y][x]; const startX = x * this.cellSize; const startY = y * this.cellSize;
               this.ctx.beginPath();
-              if (cell.walls[0]) {
-                this.ctx.moveTo(startX, startY);
-                this.ctx.lineTo(startX + this.cellSize, startY);
-              }
-              if (cell.walls[1]) {
-                this.ctx.moveTo(startX + this.cellSize, startY);
-                this.ctx.lineTo(startX + this.cellSize, startY + this.cellSize);
-              }
-              if (cell.walls[2]) {
-                this.ctx.moveTo(startX, startY + this.cellSize);
-                this.ctx.lineTo(startX + this.cellSize, startY + this.cellSize);
-              }
-              if (cell.walls[3]) {
-                this.ctx.moveTo(startX, startY);
-                this.ctx.lineTo(startX, startY + this.cellSize);
-              }
+              if (cell.walls[0]) { this.ctx.moveTo(startX, startY); this.ctx.lineTo(startX + this.cellSize, startY); }
+              if (cell.walls[1]) { this.ctx.moveTo(startX + this.cellSize, startY); this.ctx.lineTo(startX + this.cellSize, startY + this.cellSize); }
+              if (cell.walls[2]) { this.ctx.moveTo(startX, startY + this.cellSize); this.ctx.lineTo(startX + this.cellSize, startY + this.cellSize); }
+              if (cell.walls[3]) { this.ctx.moveTo(startX, startY); this.ctx.lineTo(startX, startY + this.cellSize); }
               this.ctx.stroke();
             }
           }
-
-          // Draw start and end points
-          this.ctx.fillStyle = "#00ff88";
-          this.ctx.beginPath();
-          this.ctx.arc(
-            this.cellSize / 2,
-            this.cellSize / 2,
-            this.cellSize / 4,
-            0,
-            Math.PI * 2,
-          );
-          this.ctx.fill();
-
-          this.ctx.fillStyle = "#ff3366";
-          this.ctx.beginPath();
-          this.ctx.arc(
-            this.canvas.width - this.cellSize / 2,
-            this.canvas.height - this.cellSize / 2,
-            this.cellSize / 4,
-            0,
-            Math.PI * 2,
-          );
-          this.ctx.fill();
-
-          // Draw player
-          const x = this.playerPos.x * this.cellSize + this.cellSize / 2;
-          const y = this.playerPos.y * this.cellSize + this.cellSize / 2;
-
-          this.ctx.fillStyle = "#00ffff";
-          this.ctx.beginPath();
-          this.ctx.arc(x, y, this.cellSize / 3, 0, Math.PI * 2);
-          this.ctx.fill();
+          this.ctx.fillStyle = "#00ff88"; this.ctx.beginPath(); this.ctx.arc(this.cellSize / 2, this.cellSize / 2, this.cellSize / 4, 0, Math.PI * 2); this.ctx.fill();
+          this.ctx.fillStyle = "#ff3366"; this.ctx.beginPath(); this.ctx.arc(this.canvas.width - this.cellSize / 2, this.canvas.height - this.cellSize / 2, this.cellSize / 4, 0, Math.PI * 2); this.ctx.fill();
+          const x = this.playerPos.x * this.cellSize + this.cellSize / 2; const y = this.playerPos.y * this.cellSize + this.cellSize / 2;
+          this.ctx.fillStyle = "#00ffff"; this.ctx.beginPath(); this.ctx.arc(x, y, this.cellSize / 3, 0, Math.PI * 2); this.ctx.fill();
         }
 
         handleKeyPress(e) {
           if (!this.startTime) return;
-
-          const key = e.key;
-          const currentCell = this.maze[this.playerPos.y][this.playerPos.x];
-          let moved = false;
-
+          const key = e.key; const currentCell = this.maze[this.playerPos.y][this.playerPos.x]; let moved = false;
           switch (key) {
-            case "ArrowUp":
-              if (!currentCell.walls[0] && this.playerPos.y > 0) {
-                this.playerPos.y--;
-                moved = true;
-              }
-              break;
-            case "ArrowRight":
-              if (!currentCell.walls[1] && this.playerPos.x < this.size - 1) {
-                this.playerPos.x++;
-                moved = true;
-              }
-              break;
-            case "ArrowDown":
-              if (!currentCell.walls[2] && this.playerPos.y < this.size - 1) {
-                this.playerPos.y++;
-                moved = true;
-              }
-              break;
-            case "ArrowLeft":
-              if (!currentCell.walls[3] && this.playerPos.x > 0) {
-                this.playerPos.x--;
-                moved = true;
-              }
-              break;
+            case "ArrowUp": if (!currentCell.walls[0] && this.playerPos.y > 0) { this.playerPos.y--; moved = true; } break;
+            case "ArrowRight": if (!currentCell.walls[1] && this.playerPos.x < this.size - 1) { this.playerPos.x++; moved = true; } break;
+            case "ArrowDown": if (!currentCell.walls[2] && this.playerPos.y < this.size - 1) { this.playerPos.y++; moved = true; } break;
+            case "ArrowLeft": if (!currentCell.walls[3] && this.playerPos.x > 0) { this.playerPos.x--; moved = true; } break;
           }
-
-          if (moved) {
-            this.drawMaze();
-            this.checkWin();
-          }
+          if (moved) { this.drawMaze(); this.checkWin(); }
         }
 
         checkWin() {
-          if (
-            this.playerPos.x === this.size - 1 &&
-            this.playerPos.y === this.size - 1
-          ) {
-            clearInterval(this.timerInterval);
-            const endTime = (Date.now() - this.startTime) / 1000;
-
-            if (this.currentLevel < 3) {
-              this.showLevelComplete(endTime);
-            } else {
-              this.showGameComplete(endTime);
-            }
+          if (this.playerPos.x === this.size - 1 && this.playerPos.y === this.size - 1) {
+            clearInterval(this.timerInterval); const endTime = (Date.now() - this.startTime) / 1000;
+            if (this.currentLevel < 3) { this.showLevelComplete(endTime); } else { this.showGameComplete(endTime); }
           }
         }
 
         showLevelComplete(timeElapsed) {
-          const popup = document.getElementById("winPopup");
-          const message = document.getElementById("winMessage");
+          const popup = document.getElementById("winPopup"); const message = document.getElementById("winMessage");
           message.textContent = `You completed Level ${this.currentLevel} in ${timeElapsed.toFixed(1)} seconds!`;
           popup.classList.remove("hidden");
         }
 
-        showGameComplete(timeElapsed) {
-          document
-            .getElementById("gameCompletePopup")
-            .classList.remove("hidden");
-        }
+        showGameComplete(timeElapsed) { document.getElementById("gameCompletePopup").classList.remove("hidden"); }
 
-        showGameOver(currentTime) {
-          const popup = document.getElementById("gameOverPopup");
-          const finalTimeDisplay = document.getElementById("finalTimeDisplay");
-          finalTimeDisplay.textContent = `Time: ${currentTime.toFixed(1)}s`;
-          popup.classList.remove("hidden");
-        }
+        showGameOver() { document.getElementById("gameOverPopup").classList.remove("hidden"); }
 
         reset() {
-          this.playerPos = { x: 0, y: 0 };
-          this.startTime = null;
-          clearInterval(this.timerInterval);
+          this.playerPos = { x: 0, y: 0 }; this.startTime = null; clearInterval(this.timerInterval);
           document.getElementById("timer").textContent = "Time: 0s";
           document.getElementById("winPopup").classList.add("hidden");
           document.getElementById("gameCompletePopup").classList.add("hidden");
           document.getElementById("gameOverPopup").classList.add("hidden");
-          this.initializeMaze();
-          this.generateMaze(0, 0);
-          this.drawMaze();
+          this.initializeMaze(); this.generateMaze(0, 0); this.drawMaze();
         }
 
         start() {
-          this.reset();
-          this.startTime = Date.now();
+          this.reset(); this.startTime = Date.now();
           this.timerInterval = setInterval(() => {
             const currentTime = (Date.now() - this.startTime) / 1000;
             const timeLeft = Math.max(0, this.timeLimit - currentTime);
-            document.getElementById("timer").textContent =
-              `Time: ${timeLeft.toFixed(1)}s`;
-
-            if (timeLeft <= 0) {
-              clearInterval(this.timerInterval);
-              this.showGameOver(this.timeLimit);
-            }
+            document.getElementById("timer").textContent = `Time: ${timeLeft.toFixed(1)}s`;
+            if (timeLeft <= 0) { clearInterval(this.timerInterval); this.showGameOver(); }
           }, 100);
         }
       }
 
       document.addEventListener("DOMContentLoaded", () => {
-        const canvas = document.getElementById("mazeCanvas");
-        const game = new MazeGame(canvas);
-        game.drawMaze();
-
-        document
-          .getElementById("startGame")
-          .addEventListener("click", () => game.start());
+        const canvas = document.getElementById("mazeCanvas"); const game = new MazeGame(canvas); game.drawMaze();
+        document.getElementById("startGame").addEventListener("click", () => game.start());
       });
     </script>
   </body>

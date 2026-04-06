@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Calendar, Trash2, Edit, Database, RefreshCw, ChevronRight, User, Image as ImageIcon, X, Clock, Info, Sparkles } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 
@@ -38,17 +38,16 @@ export const Notifications: React.FC<NotificationsProps> = ({ isAdmin, onEdit, s
     
     if (sheetConfig?.enabled && sheetConfig.id) {
       try {
-        const sheetData = await googleSheetsService.fetchSheetData('Notifications');
+        const sheetData = await firebaseService.fetchCollection('Notifications');
         const mappedSheetData = sheetData.map((item, index) => ({
-          id: `sheet-notif-${index}`,
+          id: item.id,
           title: item.title || item.notificationtitle || 'No Title',
           message: item.message || item.notificationmessage || '',
           imageUrl: item.imageurl || '',
           author: item.author || 'Admin',
           type: item.type || 'Announcement',
           createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-          isFromSheet: true,
-          _rowIndex: item._rowIndex
+          isFromSheet: false
         })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
         setNotifications(mappedSheetData);
       } catch (err) {
@@ -67,10 +66,6 @@ export const Notifications: React.FC<NotificationsProps> = ({ isAdmin, onEdit, s
   }, [sheetConfig]);
 
   const handleDelete = async (id: string) => {
-    if (!sheetConfig?.scriptUrl) {
-      alert('Google Sheets data cannot be deleted from the app without a Script URL. Please delete it from the spreadsheet.');
-      return;
-    }
     setDeleteId(id);
     setIsConfirmOpen(true);
   };
@@ -79,8 +74,8 @@ export const Notifications: React.FC<NotificationsProps> = ({ isAdmin, onEdit, s
     if (!deleteId) return;
     try {
       const item = notifications.find(n => n.id === deleteId);
-      if (item && item._rowIndex) {
-        const result = await googleSheetsService.writeToSheet('delete', 'Notifications', { _rowIndex: item._rowIndex });
+      if (item && item.id) {
+        const result = await firebaseService.writeToCollection('delete', 'Notifications', { id: item.id });
         if (result.success) {
           fetchNotifications();
         } else {

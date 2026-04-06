@@ -1,0 +1,252 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application (student, teacher, or admin)",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "fatherName": { "type": "string" },
+        "mobile": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "teacher", "admin"] },
+        "className": { "type": "string" },
+        "subject": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdat": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "name", "role", "active"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification or announcement",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "date": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "GalleryItem": {
+      "title": "Gallery Item",
+      "description": "An image or video in the gallery",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string", "enum": ["image", "video"] },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "StudyMaterial": {
+      "title": "Study Material",
+      "description": "Educational material like PDFs or videos",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string" },
+        "className": { "type": "string" },
+        "subject": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Topper": {
+      "title": "Topper",
+      "description": "A student who achieved top marks",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "marks": { "type": "string" },
+        "exam": { "type": "string" },
+        "year": { "type": "string" },
+        "image": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Test": {
+      "title": "Test",
+      "description": "A test or quiz",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "className": { "type": "string" },
+        "subject": { "type": "string" },
+        "duration": { "type": "number" },
+        "status": { "type": "string", "enum": ["Draft", "Active", "Closed"] },
+        "marksperquestion": { "type": "number" },
+        "negativemarks": { "type": "number" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "TestQuestion": {
+      "title": "Test Question",
+      "description": "A question belonging to a test",
+      "type": "object",
+      "properties": {
+        "testId": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "answer": { "type": "string" },
+        "image": { "type": "string" },
+        "explanation": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "TestResult": {
+      "title": "Test Result",
+      "description": "A user's result for a test",
+      "type": "object",
+      "properties": {
+        "testId": { "type": "string" },
+        "userId": { "type": "string" },
+        "score": { "type": "number" },
+        "totalMarks": { "type": "number" },
+        "answers": { "type": "object" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "NoticeBoardItem": {
+      "title": "Notice Board Item",
+      "description": "An item on the notice board",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PrePrimaryContent": {
+      "title": "Pre-Primary Content",
+      "description": "Content for pre-primary students",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Kahani": {
+      "title": "Kahani",
+      "description": "A story",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "AppSetting": {
+      "title": "App Setting",
+      "description": "A global application setting",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" },
+        "value": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Teacher": {
+      "title": "Teacher",
+      "description": "A teacher profile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "bio": { "type": "string" },
+        "image": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SocialLink": {
+      "title": "Social Link",
+      "description": "A link to a social media profile",
+      "type": "object",
+      "properties": {
+        "platform": { "type": "string" },
+        "url": { "type": "string" },
+        "icon": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SuccessStory": {
+      "title": "Success Story",
+      "description": "A success story of a student",
+      "type": "object",
+      "properties": {
+        "studentName": { "type": "string" },
+        "story": { "type": "string" },
+        "image": { "type": "string" },
+        "createdat": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Collection of users"
+    },
+    "notifications": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Collection of notifications"
+    },
+    "gallery": {
+      "schema": { "$ref": "#/entities/GalleryItem" },
+      "description": "Collection of gallery items"
+    },
+    "studyMaterials": {
+      "schema": { "$ref": "#/entities/StudyMaterial" },
+      "description": "Collection of study materials"
+    },
+    "toppers": {
+      "schema": { "$ref": "#/entities/Topper" },
+      "description": "Collection of toppers"
+    },
+    "tests": {
+      "schema": { "$ref": "#/entities/Test" },
+      "description": "Collection of tests"
+    },
+    "testQuestions": {
+      "schema": { "$ref": "#/entities/TestQuestion" },
+      "description": "Collection of test questions"
+    },
+    "testResults": {
+      "schema": { "$ref": "#/entities/TestResult" },
+      "description": "Collection of test results"
+    },
+    "noticeBoard": {
+      "schema": { "$ref": "#/entities/NoticeBoardItem" },
+      "description": "Collection of notice board items"
+    },
+    "prePrimaryContent": {
+      "schema": { "$ref": "#/entities/PrePrimaryContent" },
+      "description": "Collection of pre-primary content"
+    },
+    "kahanis": {
+      "schema": { "$ref": "#/entities/Kahani" },
+      "description": "Collection of stories"
+    },
+    "appSettings": {
+      "schema": { "$ref": "#/entities/AppSetting" },
+      "description": "Collection of app settings"
+    },
+    "teachers": {
+      "schema": { "$ref": "#/entities/Teacher" },
+      "description": "Collection of teachers"
+    },
+    "socialLinks": {
+      "schema": { "$ref": "#/entities/SocialLink" },
+      "description": "Collection of social links"
+    },
+    "successStories": {
+      "schema": { "$ref": "#/entities/SuccessStory" },
+      "description": "Collection of success stories"
+    }
+  }
+}

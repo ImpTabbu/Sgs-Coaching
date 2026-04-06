@@ -11,78 +11,28 @@ export default defineConfig(({mode}) => {
       react(), 
       tailwindcss(),
       VitePWA({
-        injectRegister: 'auto',
         registerType: 'autoUpdate',
         workbox: {
-          cleanupOutdatedCaches: true,
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/blogger\.googleusercontent\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'blogger-images',
-                expiration: {
-                  maxEntries: 50,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/picsum\.photos\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'picsum-images',
-                expiration: {
-                  maxEntries: 50,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            }
-          ]
         },
-        includeAssets: [],
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
-          id: '/',
           name: 'SGS Coaching',
-          short_name: 'SGS Coaching',
-          description: 'SGS Coaching Management and Learning App',
-          theme_color: '#0021ff',
-          background_color: '#ffffff',
-          display: 'standalone',
-          orientation: 'portrait',
-          scope: '/',
-          start_url: '/',
+          short_name: 'SGS',
+          description: 'SGS Coaching Management and Study App',
+          theme_color: '#6f0ff9',
           icons: [
             {
-              src: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjqBtUkq3GaWuBFlHDa9tXyVPjdOtjFFJQJxBtlR55lER7dnGHhkrDXgByZs5x990inb5w_FMhxQnewWBI6Zw3doN9Fzy7wKGR-NF-AA8qyakolVWrwjpvmJaktjiyK_OJTGX4HDBlooulzV6o0Wz1kBAYwnxzHCAdE5Gxp6tSJr1RNE5kzWGXy0Ho-gFs/s1600/SGS%20App%20Logo-modified.png',
+              src: 'pwa-192x192.png',
               sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any'
+              type: 'image/png'
             },
             {
-              src: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjqBtUkq3GaWuBFlHDa9tXyVPjdOtjFFJQJxBtlR55lER7dnGHhkrDXgByZs5x990inb5w_FMhxQnewWBI6Zw3doN9Fzy7wKGR-NF-AA8qyakolVWrwjpvmJaktjiyK_OJTGX4HDBlooulzV6o0Wz1kBAYwnxzHCAdE5Gxp6tSJr1RNE5kzWGXy0Ho-gFs/s1600/SGS%20App%20Logo-modified.png',
+              src: 'pwa-512x512.png',
               sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any'
-            },
-            {
-              src: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjqBtUkq3GaWuBFlHDa9tXyVPjdOtjFFJQJxBtlR55lER7dnGHhkrDXgByZs5x990inb5w_FMhxQnewWBI6Zw3doN9Fzy7wKGR-NF-AA8qyakolVWrwjpvmJaktjiyK_OJTGX4HDBlooulzV6o0Wz1kBAYwnxzHCAdE5Gxp6tSJr1RNE5kzWGXy0Ho-gFs/s1600/SGS%20App%20Logo-modified.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable'
+              type: 'image/png'
             }
           ]
-        },
-        devOptions: {
-          enabled: true
         }
       })
     ],

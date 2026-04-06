@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Image as ImageIcon, Video, Calendar, Trash2, Edit, Database, RefreshCw, Play, Info, X } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 
@@ -65,30 +65,28 @@ export const Gallery: React.FC<GalleryProps> = ({ isAdmin, onEdit, sheetConfig }
     
     if (sheetConfig?.enabled && sheetConfig.id) {
       try {
-        const sheetData = await googleSheetsService.fetchSheetData('Gallery');
+        const sheetData = await firebaseService.fetchCollection('Gallery');
         
         const mappedPhotos = sheetData
           .filter(item => !item.type || item.type.toLowerCase() === 'photo')
           .map((item, index) => ({
-            id: `sheet-photo-${index}`,
+            id: item.id,
             title: item.title || 'No Title',
             url: item.url || '',
             description: item.description || '',
             createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-            isFromSheet: true,
-            _rowIndex: item._rowIndex
+            isFromSheet: false
           }));
 
         const mappedVideos = sheetData
           .filter(item => item.type && item.type.toLowerCase() === 'video')
           .map((item, index) => ({
-            id: `sheet-video-${index}`,
+            id: item.id,
             title: item.title || 'No Title',
             url: item.url || '',
             description: item.description || '',
             createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-            isFromSheet: true,
-            _rowIndex: item._rowIndex
+            isFromSheet: false
           }));
         
         setPhotos(mappedPhotos.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
@@ -110,10 +108,6 @@ export const Gallery: React.FC<GalleryProps> = ({ isAdmin, onEdit, sheetConfig }
   }, [sheetConfig]);
 
   const handleDelete = async (id: string, col: string) => {
-    if (!sheetConfig?.scriptUrl) {
-      alert('Google Sheets data cannot be deleted from the app without a Script URL. Please delete it from the spreadsheet.');
-      return;
-    }
     setDeleteTarget({ id, col });
     setIsConfirmOpen(true);
   };
@@ -122,8 +116,8 @@ export const Gallery: React.FC<GalleryProps> = ({ isAdmin, onEdit, sheetConfig }
     if (!deleteTarget) return;
     try {
       const item = [...photos, ...videos].find(m => m.id === deleteTarget.id);
-      if (item && item._rowIndex) {
-        const result = await googleSheetsService.writeToSheet('delete', 'Gallery', { _rowIndex: item._rowIndex });
+      if (item && item.id) {
+        const result = await firebaseService.writeToCollection('delete', 'Gallery', { id: item.id });
         if (result.success) {
           fetchGallery();
         } else {

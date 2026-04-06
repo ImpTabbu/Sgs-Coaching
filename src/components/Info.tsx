@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Info as InfoIcon, Calendar, Smartphone, Globe, ShieldCheck, RefreshCw, Star, Heart } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -23,14 +23,17 @@ const itemVariants = {
 
 export const Info: React.FC = () => {
   const [infoImage, setInfoImage] = useState('https://picsum.photos/seed/info/800/400');
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const settings = await googleSheetsService.fetchSheetData('AppBasicSettings');
-        const imgSetting = settings.find((s: any) => s.settingkey === 'info_image' || s.key === 'info_image');
-        if (imgSetting) {
-          setInfoImage(imgSetting.settingvalue || imgSetting.value);
+        const appSettings = await firebaseService.fetchCollection('AppBasicSettings');
+        const generalSettings = appSettings?.find((s: any) => s.id === 'general');
+        setSettings(generalSettings || null);
+        
+        if (generalSettings?.info_image) {
+          setInfoImage(generalSettings.info_image);
         }
       } catch (err) {
         console.error("Failed to fetch info image:", err);
@@ -124,7 +127,7 @@ export const Info: React.FC = () => {
               </div>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              We aim to provide accessible, high-quality education to students everywhere, combining traditional teaching values with modern technology to foster academic excellence.
+              {settings?.aboutText || "We aim to provide accessible, high-quality education to students everywhere, combining traditional teaching values with modern technology to foster academic excellence."}
             </p>
           </motion.div>
 

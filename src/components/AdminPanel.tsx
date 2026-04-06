@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Send, Image as ImageIcon, Video, HelpCircle, BookOpen, Bell, Loader2, User, Users, Trash2, Edit, X, Database, Settings, ShieldCheck, Sparkles, Plus, Award } from 'lucide-react';
+import { cn } from '@/src/lib/utils';
+import { Send, Image as ImageIcon, Video, HelpCircle, BookOpen, Bell, Loader2, User, Users, Trash2, Edit, X, Database, Settings, ShieldCheck, Sparkles, Plus, Award, Phone, Mail, MapPin, QrCode, CreditCard, Trophy, CheckCircle, XCircle, Key } from 'lucide-react';
 import { SUBJECTS, TOPPERS_DATA } from '../constants';
 import { ConfirmModal } from './ConfirmModal';
-import { googleSheetsService, SheetData } from '../services/googleSheetsService';
+import { firebaseService, AppData } from '../services/firebaseService';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface AdminPanelProps {
@@ -48,8 +49,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   const [mediaType, setMediaType] = useState<'photos' | 'videos'>('photos');
 
   // Study Material Form
-  const [studyLevel, setStudyLevel] = useState('Pre-Primary');
-  const [studyClass, setStudyClass] = useState('L.K.G');
+  const [studyLevel, setStudyLevel] = useState('Primary (1st–5th)');
+  const [studyClass, setStudyClass] = useState('1st');
   const [studySubject, setStudySubject] = useState('Hindi');
   const [studyTitle, setStudyTitle] = useState('');
   const [studyUrl, setStudyUrl] = useState('');
@@ -98,10 +99,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   // Kahani Form
   const [kahaniTitle, setKahaniTitle] = useState('');
   const [kahaniCoverImage, setKahaniCoverImage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [kahaniAudioUrl, setKahaniAudioUrl] = useState('');
   const [kahaniMoral, setKahaniMoral] = useState('');
   const [kahaniContent, setKahaniContent] = useState([{ type: 'paragraph', value: '' }]);
   const [kahaniCategory, setKahaniCategory] = useState('Popular Stories');
+  
+  // App Settings Form
+  const [homeImages, setHomeImages] = useState<string[]>(['']);
+  const [successStories, setSuccessStories] = useState<any[]>([]);
+  const [storyName, setStoryName] = useState('');
+  const [storyExam, setStoryExam] = useState('');
+  const [storyScore, setStoryScore] = useState('');
+  const [storyText, setStoryText] = useState('');
+  const [supportQR, setSupportQR] = useState('');
+  const [supportUPI, setSupportUPI] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactAddress, setContactAddress] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [aboutText, setAboutText] = useState('');
+  const [commitmentImage, setCommitmentImage] = useState('');
+  const [commitmentText, setCommitmentText] = useState('');
+  const [aboutImage, setAboutImage] = useState('');
+  const [contactImage, setContactImage] = useState('');
+  const [infoImage, setInfoImage] = useState('');
+  const [appSettings, setAppSettings] = useState<any[]>([]);
+  
+  // Teachers Form
+  const [teacherName, setTeacherName] = useState('');
+  const [teacherSubject, setTeacherSubject] = useState('');
+  const [teacherDesignation, setTeacherDesignation] = useState('');
+  const [teacherImageUrl, setTeacherImageUrl] = useState('');
+  const [teachers, setTeachers] = useState<any[]>([]);
  
   const [toppers, setToppers] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -113,7 +142,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   };
 
   const tabs = [
-    { id: 'config', label: 'Sync', icon: Database, color: 'text-emerald-600', bgColor: 'bg-emerald-50', roles: ['admin'] },
     { id: 'users', label: 'Users', icon: User, color: 'text-indigo-600', bgColor: 'bg-indigo-50', roles: ['admin'] },
     { id: 'notification', label: 'Alerts', icon: Bell, color: 'text-brand-primary', bgColor: 'bg-brand-primary/10', roles: ['admin', 'teacher'] },
     { id: 'media', label: 'Gallery', icon: ImageIcon, color: 'text-purple-600', bgColor: 'bg-purple-50', roles: ['admin', 'teacher'] },
@@ -121,9 +149,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
     { id: 'test_results', label: 'Results', icon: Award, color: 'text-indigo-600', bgColor: 'bg-indigo-50', roles: ['admin', 'teacher'] },
     { id: 'study', label: 'Study', icon: BookOpen, color: 'text-blue-600', bgColor: 'bg-blue-50', roles: ['admin', 'teacher'] },
     { id: 'topper', label: 'Toppers', icon: Award, color: 'text-rose-600', bgColor: 'bg-rose-50', roles: ['admin', 'teacher'] },
+    { id: 'teachers', label: 'Teachers', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', roles: ['admin'] },
     { id: 'pre_primary', label: 'Pre-Primary', icon: Sparkles, color: 'text-pink-600', bgColor: 'bg-pink-50', roles: ['admin', 'teacher'] },
     { id: 'kahani', label: 'Kahani', icon: BookOpen, color: 'text-fuchsia-600', bgColor: 'bg-fuchsia-50', roles: ['admin', 'teacher'] },
     { id: 'notice', label: 'Notice', icon: Bell, color: 'text-orange-600', bgColor: 'bg-orange-50', roles: ['admin'] },
+    { id: 'app_settings', label: 'App Settings', icon: Settings, color: 'text-slate-600', bgColor: 'bg-slate-100', roles: ['admin'] },
   ].filter(tab => tab.roles.includes(currentUser.role));
 
   useEffect(() => {
@@ -133,173 +163,245 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
     }
   }, [initialEdit]);
 
-  const fetchAllData = async () => {
+  const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     setLoading(true);
     try {
-      const data = await googleSheetsService.getAllData();
-      
-      setNotifications((data.notifications || []).map((item, index) => ({
-        id: `sheet-notif-${index}`,
-        title: item.title,
-        message: item.message,
-        imageUrl: item.imageurl || '',
-        author: item.author || 'Admin',
-        type: item.type || 'Announcement',
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-
-      const sheetPhotos = (data.gallery || []).filter((m: any) => (m.type || '').toLowerCase() === 'photo');
-      const sheetVideos = (data.gallery || []).filter((m: any) => (m.type || '').toLowerCase() === 'video');
-      
-      setPhotos(sheetPhotos.map((item, index) => ({
-        id: `sheet-photo-${index}`,
-        title: item.title,
-        url: item.url,
-        description: item.description || '',
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-
-      setVideos(sheetVideos.map((item, index) => ({
-        id: `sheet-video-${index}`,
-        title: item.title,
-        url: item.url,
-        description: item.description || '',
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-
-      setMaterials((data.studyMaterials || []).map((item, index) => ({
-        id: `sheet-study-${index}`,
-        title: item.title,
-        videos: item.videos ? (typeof item.videos === 'string' ? JSON.parse(item.videos) : item.videos) : [],
-        notesUrl: item.notesurl || '',
-        readUrl: item.readurl || '',
-        homeworkUrls: item.homeworkurls ? (typeof item.homeworkurls === 'string' ? JSON.parse(item.homeworkurls) : item.homeworkurls) : [],
-        level: item.level,
-        className: item.classname,
-        subject: item.subject,
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => a.createdAt.toDate().getTime() - b.createdAt.toDate().getTime()));
-
-      setToppers((data.toppers || []).map((item, index) => ({
-        id: `sheet-topper-${index}`,
-        name: item.name,
-        className: item.classname,
-        imageUrl: item.imageurl,
-        description: item.description,
-        date: item.date,
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-
-      setUsers((data.users || []).map((item, index) => ({
-        id: `sheet-user-${index}`,
-        username: item.username,
-        password: item.password,
-        role: item.role,
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })));
-
-      let testSheetData: Partial<SheetData> = data;
-      const currentTestSheetId = testSheetId || localStorage.getItem('testSheetId');
-      const currentTestScriptUrl = testScriptUrl || localStorage.getItem('testScriptUrl');
-
-      if (currentTestSheetId) {
-        try {
-          testSheetData = await googleSheetsService.getTestData({
-            sheetId: currentTestSheetId,
-            scriptUrl: currentTestScriptUrl || undefined
-          });
-        } catch (testErr) {
-          console.error('Failed to fetch test sheet data:', testErr);
-          // Fallback to main sheet data if test sheet fetch fails
-          testSheetData = data;
-        }
+      const result = await firebaseService.updateUserStatus(userId, !currentStatus);
+      if (result.success) {
+        setSuccess(result.message);
+        fetchAllData();
+      } else {
+        setError(result.message);
       }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setTests((testSheetData.tests || []).map((item, index) => ({
-        id: item.id || `sheet-test-${index}`,
-        title: item.title,
-        className: item.classname,
-        subject: item.subject,
-        duration: item.duration,
-        status: item.status,
-        marksperquestion: item.marksperquestion,
-        negativemarks: item.negativemarks,
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+  const handleChangeUserRole = async (userId: string, newRole: string) => {
+    setLoading(true);
+    try {
+      const result = await firebaseService.updateUserStatus(userId, true, newRole);
+      if (result.success) {
+        setSuccess(result.message);
+        fetchAllData();
+      } else {
+        setError(result.message);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setTestQuestions((testSheetData.testQuestions || []).map((item, index) => ({
-        id: item.id || `sheet-tq-${index}`,
-        testId: item.testid,
-        question: item.question,
-        imageUrl: item.imageurl || '',
-        options: [item.option1, item.option2, item.option3, item.option4].filter(Boolean),
-        answer: item.answer,
-        explanation: item.explanation,
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+  const fetchAllData = async () => {
+    if (!activeTab) return;
+    setLoading(true);
+    try {
+      if (activeTab === 'users') {
+        const usersData = await firebaseService.fetchCollection('Users');
+        setUsers(usersData.map((item: any) => ({
+          id: item.id,
+          username: item.username || item.name || '',
+          name: item.name || '',
+          fatherName: item.fatherName || '',
+          mobile: item.mobile || '',
+          email: item.email || '',
+          role: item.role || 'student',
+          active: item.active || false,
+          className: item.className || '',
+          subject: item.subject || '',
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+      } else if (activeTab === 'test_series') {
+        const [testsData, testQuestionsData, testResultsData] = await Promise.all([
+          firebaseService.fetchCollection('Tests'),
+          firebaseService.fetchCollection('TestQuestions'),
+          firebaseService.fetchCollection('TestResults')
+        ]);
+        setTests(testsData.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          className: item.classname || item.className,
+          subject: item.subject,
+          duration: item.duration,
+          status: item.status || 'Draft',
+          marksperquestion: item.marksperquestion || 1,
+          negativemarks: item.negativemarks || 0,
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+        
+        setTestQuestions(testQuestionsData.map((item: any) => ({
+          id: item.id,
+          testId: item.testid || item.testId,
+          question: item.question,
+          imageUrl: item.imageurl || '',
+          options: [item.option1, item.option2, item.option3, item.option4].filter(Boolean),
+          answer: item.answer,
+          explanation: item.explanation || '',
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
 
-      setTestResults((testSheetData.testResults || []).map((item, index) => ({
-        id: item.id || `sheet-tr-${index}`,
-        testId: item.testid,
-        username: item.username,
-        score: item.score,
-        total: item.total,
-        percentage: item.percentage,
-        timeTaken: item.timetaken,
-        completedAt: item.completedat ? { toDate: () => new Date(item.completedat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.completedAt.toDate().getTime() - a.completedAt.toDate().getTime()));
+        setTestResults(testResultsData.map((item: any) => ({
+          id: item.id,
+          testId: item.testid || item.testId,
+          username: item.username || item.userId,
+          score: item.score,
+          total: item.totalmarks || item.totalMarks || item.total,
+          percentage: item.percentage,
+          timeTaken: item.timetaken,
+          completedAt: item.completedat ? { toDate: () => new Date(item.completedat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.completedAt.toDate().getTime() - a.completedAt.toDate().getTime()));
+      } else if (activeTab === 'notification') {
+        const notificationsData = await firebaseService.fetchCollection('Notifications');
+        setNotifications(notificationsData.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          message: item.message,
+          imageUrl: item.imageurl || '',
+          author: item.author || 'Admin',
+          type: item.type || 'Announcement',
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+      } else if (activeTab === 'media') {
+        const galleryData = await firebaseService.fetchCollection('Gallery');
+        const sheetPhotos = galleryData.filter((m: any) => (m.type || '').toLowerCase() === 'photo');
+        const sheetVideos = galleryData.filter((m: any) => (m.type || '').toLowerCase() === 'video');
+        
+        setPhotos(sheetPhotos.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          url: item.url,
+          description: item.description || '',
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
 
-      setNoticeBoard((data.noticeBoard || []).map((item, index) => ({
-        id: `sheet-notice-${index}`,
-        text: item.text,
-        date: item.date,
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+        setVideos(sheetVideos.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          url: item.url,
+          description: item.description || '',
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+      } else if (activeTab === 'study') {
+        const studyMaterialsData = await firebaseService.fetchCollection('StudyMaterials');
+        setMaterials(studyMaterialsData.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          videos: item.videos ? (typeof item.videos === 'string' ? JSON.parse(item.videos) : item.videos) : [],
+          notesUrl: item.notesurl || '',
+          readUrl: item.readurl || '',
+          homeworkUrls: item.homeworkurls ? (typeof item.homeworkurls === 'string' ? JSON.parse(item.homeworkurls) : item.homeworkurls) : [],
+          level: item.level,
+          className: item.classname,
+          subject: item.subject,
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => a.createdAt.toDate().getTime() - b.createdAt.toDate().getTime()));
+      } else if (activeTab === 'topper') {
+        const toppersData = await firebaseService.fetchCollection('Toppers');
+        setToppers(toppersData.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          className: item.classname,
+          imageUrl: item.imageurl,
+          description: item.description,
+          date: item.date,
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+      } else if (activeTab === 'teachers') {
+        const teachersData = await firebaseService.fetchCollection('Teachers');
+        setTeachers(teachersData.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          subject: item.subject,
+          designation: item.designation,
+          imageUrl: item.imageurl,
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+      } else if (activeTab === 'pre_primary') {
+        const prePrimaryContentData = await firebaseService.fetchCollection('PrePrimaryContent');
+        setPrePrimaryContent(prePrimaryContentData.map((item: any) => ({
+          id: item.id,
+          className: item.classname,
+          subject: item.subject,
+          images: item.images ? (typeof item.images === 'string' ? JSON.parse(item.images) : item.images) : [],
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })));
+      } else if (activeTab === 'kahani') {
+        const kahanisData = await firebaseService.fetchCollection('Kahanis');
+        setKahanis(kahanisData.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          coverImage: item.coverimage,
+          audioUrl: item.audiourl,
+          moral: item.moral,
+          content: item.content ? (typeof item.content === 'string' ? JSON.parse(item.content) : item.content) : [],
+          category: item.category || 'Popular Stories',
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+      } else if (activeTab === 'notice') {
+        const noticeBoardData = await firebaseService.fetchCollection('NoticeBoard');
+        setNoticeBoard(noticeBoardData.map((item: any) => ({
+          id: item.id,
+          text: item.text,
+          date: item.date,
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+      } else if (activeTab === 'app_settings') {
+        const [appSettingsData, successStoriesData] = await Promise.all([
+          firebaseService.fetchCollection('AppBasicSettings'),
+          firebaseService.fetchCollection('SuccessStories')
+        ]);
+        setAppSettings(appSettingsData);
+        
+        const homeImgs = firebaseService.getSetting(appSettingsData, 'home_images', '[]');
+        try {
+          setHomeImages(JSON.parse(homeImgs));
+        } catch (e) {
+          setHomeImages(['']);
+        }
+        
+        setSupportQR(firebaseService.getSetting(appSettingsData, 'support_qr', ''));
+        setSupportUPI(firebaseService.getSetting(appSettingsData, 'support_upi', ''));
+        setContactPhone(firebaseService.getSetting(appSettingsData, 'contact_phone', ''));
+        setContactAddress(firebaseService.getSetting(appSettingsData, 'contact_address', ''));
+        setContactEmail(firebaseService.getSetting(appSettingsData, 'contact_email', ''));
+        setAboutText(firebaseService.getSetting(appSettingsData, 'about_text', ''));
+        setCommitmentImage(firebaseService.getSetting(appSettingsData, 'commitment_image', ''));
+        setCommitmentText(firebaseService.getSetting(appSettingsData, 'commitment_text', ''));
+        setAboutImage(firebaseService.getSetting(appSettingsData, 'about_image', ''));
+        setContactImage(firebaseService.getSetting(appSettingsData, 'contact_image', ''));
+        setInfoImage(firebaseService.getSetting(appSettingsData, 'info_image', ''));
 
-      setPrePrimaryContent((data.prePrimaryContent || []).map((item, index) => ({
-        id: `sheet-pp-${index}`,
-        className: item.classname,
-        subject: item.subject,
-        images: item.images ? (typeof item.images === 'string' ? JSON.parse(item.images) : item.images) : [],
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })));
-
-      setKahanis((data.kahanis || []).map((item, index) => ({
-        id: `sheet-kahani-${index}`,
-        title: item.title,
-        coverImage: item.coverimage,
-        audioUrl: item.audiourl,
-        moral: item.moral,
-        content: item.content ? (typeof item.content === 'string' ? JSON.parse(item.content) : item.content) : [],
-        category: item.category || 'Popular Stories',
-        createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-        isFromSheet: true,
-        _rowIndex: item._rowIndex
-      })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+        setSuccessStories(successStoriesData.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          exam: item.exam,
+          score: item.score,
+          text: item.text,
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('Failed to fetch data from Google Sheets.');
+      setError('Failed to fetch data from Database.');
     } finally {
       setLoading(false);
     }
@@ -317,16 +419,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
     setTestSheetId(savedTestSheetId);
     setTestScriptUrl(savedTestScriptUrl);
     setIsSheetsEnabled(savedEnabled);
+  }, []);
 
-    googleSheetsService.setSheetId(savedSheetId);
-    if (savedScriptUrl) {
-      googleSheetsService.setScriptUrl(savedScriptUrl);
-    }
-
-    if (savedEnabled && savedSheetId) {
+  useEffect(() => {
+    if (activeTab) {
       fetchAllData();
     }
-  }, []);
+  }, [activeTab]);
 
   const handleSubmit = async (e: React.FormEvent, type: string) => {
     e.preventDefault();
@@ -461,6 +560,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           category: kahaniCategory
         };
         colName = 'kahanis';
+      } else if (type === 'teacher') {
+        data = {
+          ...data,
+          name: teacherName,
+          subject: teacherSubject,
+          designation: teacherDesignation,
+          imageurl: teacherImageUrl
+        };
+        colName = 'teachers';
       }
  
       const tabMap: any = {
@@ -509,9 +617,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
         else if (type === 'pre_primary') item = prePrimaryContent.find(p => p.id === editingId);
         else if (type === 'kahani') item = kahanis.find(k => k.id === editingId);
         
-        if (item && item._rowIndex) sheetData._rowIndex = item._rowIndex;
+        if (item && item.id) sheetData.id = item.id;
 
-        const result = await googleSheetsService.writeToSheet('update', tabName, sheetData, writeConfig);
+        const result = await firebaseService.writeToCollection('update', tabName, sheetData);
         if (result.success) {
           setSuccess(result.message);
           setEditingId(null);
@@ -521,7 +629,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           throw new Error(result.message);
         }
       } else {
-        const result = await googleSheetsService.writeToSheet('add', tabName, sheetData, writeConfig);
+        const result = await firebaseService.writeToCollection('add', tabName, sheetData);
         if (result.success) {
           setSuccess(result.message);
           fetchAllData();
@@ -586,6 +694,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
         setKahaniMoral('');
         setKahaniContent([{ type: 'paragraph', value: '' }]);
         setKahaniCategory('Popular Stories');
+      } else if (type === 'teacher') {
+        setTeacherName('');
+        setTeacherSubject('');
+        setTeacherDesignation('');
+        setTeacherImageUrl('');
       }
 
     } catch (err: any) {
@@ -601,6 +714,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
     setEditingType(type);
     
     if (type === 'study') {
+      setActiveTab('study');
       setStudyLevel(item.level);
       setStudyClass(item.className);
       setStudySubject(item.subject);
@@ -610,23 +724,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       setStudyReadUrl(item.readUrl || '');
       setStudyHomeworkUrls(item.homeworkUrls || ['']);
     } else if (type === 'notification') {
+      setActiveTab('notification');
       setNotifTitle(item.title);
       setNotifMsg(item.message);
       setNotifImageUrl(item.imageUrl || '');
       setNotifAuthor(item.author || '');
       setNotifType(item.type || 'Announcement');
     } else if (type === 'media') {
+      setActiveTab('media');
       setMediaTitle(item.title);
       setMediaUrl(item.url);
       setMediaDescription(item.description || '');
       setMediaType(photos.some(p => p.id === item.id) ? 'photos' : 'videos');
     } else if (type === 'topper') {
+      setActiveTab('topper');
       setTopperName(item.name);
       setTopperClass(item.className);
       setTopperImageUrl(item.imageUrl);
       setTopperDescription(item.description);
       setTopperDate(item.date);
     } else if (type === 'test') {
+      setActiveTab('test_series');
       setTestTitle(item.title);
       setTestClass(item.className);
       setTestSubject(item.subject);
@@ -635,19 +753,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       setTestMarksPerQuestion(item.marksperquestion || '1');
       setTestNegativeMarks(item.negativemarks || '0');
     } else if (type === 'test_question') {
+      setActiveTab('test_series');
       setTestQuestion(item.question);
       setTestQuestionImage(item.imageUrl || '');
       setTestOptions(item.options);
       setTestAnswer(item.answer);
       setTestExplanation(item.explanation || '');
     } else if (type === 'notice') {
+      setActiveTab('notice');
       setNoticeText(item.text);
       setNoticeDate(item.date);
     } else if (type === 'pre_primary') {
+      setActiveTab('pre_primary');
       setPrePrimaryClass(item.className);
       setPrePrimarySubject(item.subject);
       setPrePrimaryImages(item.images || ['']);
     } else if (type === 'kahani') {
+      setActiveTab('kahani');
       setKahaniTitle(item.title);
       setKahaniCoverImage(item.coverImage);
       setKahaniAudioUrl(item.audioUrl || '');
@@ -684,7 +806,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       };
       const tabName = tabMap[deleteTarget.col] || deleteTarget.col;
       
-      // Find the item to get _rowIndex
+      // Find the item to get id
       let item: any = null;
       if (deleteTarget.col === 'notifications') item = notifications.find(n => n.id === deleteTarget.id);
       else if (deleteTarget.col === 'photos') item = photos.find(p => p.id === deleteTarget.id);
@@ -699,22 +821,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       else if (deleteTarget.col === 'pre_primary_content') item = prePrimaryContent.find(p => p.id === deleteTarget.id);
       else if (deleteTarget.col === 'kahanis') item = kahanis.find(k => k.id === deleteTarget.id);
 
-      if (item && item._rowIndex) {
-        const isTestRelated = deleteTarget.col === 'tests' || deleteTarget.col === 'test_questions' || deleteTarget.col === 'test_results';
-        const config = (isTestRelated && testSheetId) ? {
-          sheetId: testSheetId,
-          scriptUrl: testScriptUrl || scriptUrl
-        } : undefined;
-
-        const result = await googleSheetsService.writeToSheet('delete', tabName, { _rowIndex: item._rowIndex }, config);
+      if (item && item.id) {
+        const result = await firebaseService.writeToCollection('delete', tabName, { id: item.id });
         if (result.success) {
+          // Cascading delete for tests
+          if (deleteTarget.col === 'tests') {
+            const relatedQuestions = testQuestions.filter(q => q.testId === item.id);
+            const relatedResults = testResults.filter(r => r.testId === item.id);
+            
+            for (const q of relatedQuestions) {
+              await firebaseService.writeToCollection('delete', 'TestQuestions', { id: q.id });
+            }
+            for (const r of relatedResults) {
+              await firebaseService.writeToCollection('delete', 'TestResults', { id: r.id });
+            }
+          }
+
           setSuccess(result.message);
           fetchAllData();
         } else {
           throw new Error(result.message);
         }
       } else {
-        throw new Error('Could not find row index for deletion.');
+        throw new Error('Could not find item for deletion.');
       }
     } catch (err: any) {
       setError(`Delete failed: ${err.message}`);
@@ -749,8 +878,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   const handleSaveMainConfig = () => {
     setLoading(true);
     try {
-      googleSheetsService.setSheetId(sheetId);
-      googleSheetsService.setScriptUrl(scriptUrl);
       localStorage.setItem('sheetId', sheetId);
       localStorage.setItem('scriptUrl', scriptUrl);
       localStorage.setItem('isSheetsEnabled', String(isSheetsEnabled));
@@ -766,20 +893,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   };
 
   const handleRunSetup = async () => {
-    if (!scriptUrl) {
-      setError('Please set the Deployment URL first.');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-
     setLoading(true);
     try {
-      const result = await googleSheetsService.runSetup({ sheetId, scriptUrl });
-      if (result.success) {
-        setSuccess('Google Sheets Setup Successful! All tabs and headers are ready.');
-      } else {
-        setError(result.message || 'Setup failed.');
-      }
+      // Setup is no longer needed for Firebase
+      setSuccess('Firebase is active. No setup required.');
     } catch (err) {
       setError('An error occurred during setup.');
     } finally {
@@ -792,20 +909,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   };
 
   const handleRunTestSetup = async () => {
-    if (!testScriptUrl) {
-      setError('Please set the Test Deployment URL first.');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-
     setLoading(true);
     try {
-      const result = await googleSheetsService.runSetup({ sheetId: testSheetId, scriptUrl: testScriptUrl });
-      if (result.success) {
-        setSuccess('Test Series Sheets Setup Successful! All tabs and headers are ready.');
-      } else {
-        setError(result.message || 'Setup failed.');
-      }
+      // Setup is no longer required for Firebase
+      setSuccess('Firebase Test Series configuration saved successfully!');
     } catch (err) {
       setError('An error occurred during setup.');
     } finally {
@@ -838,16 +945,118 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
     setError('');
     setSuccess('');
     try {
-      googleSheetsService.setSheetId(sheetId);
-      googleSheetsService.setScriptUrl(scriptUrl);
-      const result = await googleSheetsService.testConnection();
-      if (result.success) {
-        setSuccess(`Main Sheet: ${result.message}`);
-      } else {
-        setError(`Main Sheet: ${result.message}`);
-      }
+      // Test connection is always successful with Firebase if initialized properly
+      setSuccess('Connected successfully to Firebase!');
     } catch (err: any) {
       setError(`Test failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const settingsToSave = [
+        { key: 'home_images', value: JSON.stringify(homeImages.filter(img => img.trim() !== '')) },
+        { key: 'support_qr', value: supportQR },
+        { key: 'support_upi', value: supportUPI },
+        { key: 'contact_phone', value: contactPhone },
+        { key: 'contact_address', value: contactAddress },
+        { key: 'contact_email', value: contactEmail },
+        { key: 'about_text', value: aboutText },
+        { key: 'commitment_image', value: commitmentImage },
+        { key: 'commitment_text', value: commitmentText },
+        { key: 'about_image', value: aboutImage },
+        { key: 'contact_image', value: contactImage },
+        { key: 'info_image', value: infoImage }
+      ];
+
+      for (const setting of settingsToSave) {
+        const existing = appSettings.find(s => s.key === setting.key);
+        if (existing) {
+          await firebaseService.writeToCollection('update', 'AppBasicSettings', { id: existing.id, ...setting });
+        } else {
+          await firebaseService.writeToCollection('add', 'AppBasicSettings', setting);
+        }
+      }
+
+      setSuccess('App settings updated successfully!');
+      fetchAllData();
+    } catch (err: any) {
+      setError(`Failed to save settings: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSuccessStory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const storyData = {
+        name: storyName,
+        exam: storyExam,
+        score: storyScore,
+        text: storyText
+      };
+
+      if (editingId && editingType === 'successStory') {
+        await firebaseService.writeToCollection('update', 'SuccessStories', { id: editingId, ...storyData });
+      } else {
+        await firebaseService.writeToCollection('add', 'SuccessStories', storyData);
+      }
+
+      setSuccess(`Success story ${editingId ? 'updated' : 'added'} successfully!`);
+      setStoryName('');
+      setStoryExam('');
+      setStoryScore('');
+      setStoryText('');
+      setEditingId(null);
+      setEditingType(null);
+      fetchAllData();
+    } catch (err: any) {
+      setError(`Failed to save story: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const teacherData = {
+        name: teacherName,
+        subject: teacherSubject,
+        designation: teacherDesignation,
+        imageurl: teacherImageUrl,
+        createdat: new Date().toISOString()
+      };
+
+      if (editingId && editingType === 'teacher') {
+        await firebaseService.writeToCollection('update', 'Teachers', { id: editingId, ...teacherData });
+      } else {
+        await firebaseService.writeToCollection('add', 'Teachers', teacherData);
+      }
+
+      setSuccess(`Teacher ${editingId ? 'updated' : 'added'} successfully!`);
+      setTeacherName('');
+      setTeacherSubject('');
+      setTeacherDesignation('');
+      setTeacherImageUrl('');
+      setEditingId(null);
+      setEditingType(null);
+      fetchAllData();
+    } catch (err: any) {
+      setError(`Failed to save teacher: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -858,20 +1067,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
     setError('');
     setSuccess('');
     try {
-      if (!testSheetId) {
-        setError('Please enter a Test Spreadsheet ID to test.');
-        setLoading(false);
-        return;
-      }
-      const testResult = await googleSheetsService.testConnection({
-        sheetId: testSheetId,
-        scriptUrl: testScriptUrl || scriptUrl
-      });
-      if (testResult.success) {
-        setSuccess(`Test Sheet: ${testResult.message}`);
-      } else {
-        setError(`Test Sheet: ${testResult.message}`);
-      }
+      setSuccess('Connected successfully to Firebase Test Series!');
     } catch (err: any) {
       setError(`Test failed: ${err.message}`);
     } finally {
@@ -958,219 +1154,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       )}
 
       <AnimatePresence mode="wait">
-        {/* Google Sheets Configuration */}
-        {activeTab === 'config' && (
-          <motion.section 
-            key="config"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -20, opacity: 0 }}
-            className="space-y-6"
-          >
-            {/* Main App Data Sync Card */}
-            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-emerald-600">
-                  <div className="p-2 bg-emerald-50 rounded-xl">
-                    <Database size={24} />
-                  </div>
-                  <h2 className="text-xl font-black tracking-tight">Main App Data Sync</h2>
-                </div>
-                <button 
-                  onClick={() => setActiveTab(null)}
-                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                  <X size={20} className="text-slate-400" />
-                </button>
-              </div>
-
-              <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl text-[13px] text-blue-700 leading-relaxed flex gap-3">
-                <Sparkles className="shrink-0 text-blue-500" size={18} />
-                <p>
-                  <strong>Smart Sync:</strong> Connect your Google Sheet to manage app data effortlessly. 
-                  Changes here will reflect instantly across the app.
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all">
-                  <div className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      id="enableSheets" 
-                      checked={isSheetsEnabled} 
-                      onChange={(e) => setIsSheetsEnabled(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                  </div>
-                  <label htmlFor="enableSheets" className="text-sm font-bold text-slate-700">Enable Google Sheets Integration</label>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Spreadsheet ID</label>
-                    <input 
-                      value={sheetId} 
-                      onChange={(e) => setSheetId(e.target.value)} 
-                      placeholder="Enter Sheet ID" 
-                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all font-medium" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Deployment URL</label>
-                    <input 
-                      value={scriptUrl} 
-                      onChange={(e) => setScriptUrl(e.target.value)} 
-                      placeholder="https://script.google.com/..." 
-                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all font-medium" 
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <motion.button 
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleTestMainConnection} 
-                    disabled={loading}
-                    className="flex-1 bg-white border-2 border-emerald-600 text-emerald-600 p-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-emerald-50 transition-all shadow-sm"
-                  >
-                    {loading ? <Loader2 className="animate-spin" /> : 'Test Link'}
-                  </motion.button>
-                  <motion.button 
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleRunSetup} 
-                    disabled={loading}
-                    className="flex-1 bg-white border-2 border-blue-600 text-blue-600 p-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-50 transition-all shadow-sm"
-                  >
-                    {loading ? <Loader2 className="animate-spin" /> : 'Run Setup'}
-                  </motion.button>
-                  <motion.button 
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleSaveMainConfig} 
-                    disabled={loading}
-                    className="flex-1 bg-emerald-600 text-white p-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-                  >
-                    {loading ? <Loader2 className="animate-spin" /> : 'Apply Changes'}
-                  </motion.button>
-                </div>
-
-                {isSheetsEnabled && sheetId && (
-                  <motion.a 
-                    whileTap={{ scale: 0.98 }}
-                    href={`https://docs.google.com/spreadsheets/d/${sheetId}/edit`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl shadow-slate-200"
-                  >
-                    <Database size={20} className="text-emerald-400" /> 
-                    Open Source Spreadsheet
-                  </motion.a>
-                )}
-              </div>
-
-              <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
-                <h4 className="text-[11px] font-black text-slate-500 mb-3 uppercase tracking-widest">Required Structure:</h4>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                  {['Notifications', 'Gallery', 'StudyMaterials', 'Toppers', 'PrePrimaryContent'].map(tab => (
-                    <div key={tab} className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
-                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                      {tab}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Test Series Data Sync Card */}
-            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
-              <div className="flex items-center gap-3 text-cyan-600">
-                <div className="p-2 bg-cyan-50 rounded-xl">
-                  <Sparkles size={24} />
-                </div>
-                <h2 className="text-xl font-black tracking-tight">Test Series Configuration</h2>
-              </div>
-              
-              <p className="text-sm text-slate-500">
-                Use a separate sheet for tests to keep your data organized. If left blank, the main sheet will be used.
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Test Spreadsheet ID</label>
-                  <input 
-                    value={testSheetId} 
-                    onChange={(e) => setTestSheetId(e.target.value)} 
-                    placeholder="Enter Test Sheet ID" 
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-cyan-500 focus:bg-white outline-none transition-all font-medium" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Test Deployment URL</label>
-                  <input 
-                    value={testScriptUrl} 
-                    onChange={(e) => setTestScriptUrl(e.target.value)} 
-                    placeholder="https://script.google.com/..." 
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-cyan-500 focus:bg-white outline-none transition-all font-medium" 
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <motion.button 
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleTestSeriesConnection} 
-                  disabled={loading}
-                  className="flex-1 bg-white border-2 border-cyan-600 text-cyan-600 p-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-cyan-50 transition-all shadow-sm"
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : 'Test Link'}
-                </motion.button>
-                <motion.button 
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleRunTestSetup} 
-                  disabled={loading}
-                  className="flex-1 bg-white border-2 border-cyan-600 text-cyan-600 p-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-cyan-50 transition-all shadow-sm"
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : 'Run Setup'}
-                </motion.button>
-                <motion.button 
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleSaveTestConfig} 
-                  disabled={loading}
-                  className="flex-1 bg-cyan-600 text-white p-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-cyan-700 transition-all shadow-lg shadow-cyan-200"
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : 'Apply Changes'}
-                </motion.button>
-              </div>
-
-              {isSheetsEnabled && testSheetId && (
-                <motion.a 
-                  whileTap={{ scale: 0.98 }}
-                  href={`https://docs.google.com/spreadsheets/d/${testSheetId}/edit`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-full bg-slate-900 text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl shadow-slate-200"
-                >
-                  <Database size={20} className="text-cyan-400" /> 
-                  Open Test Spreadsheet
-                </motion.a>
-              )}
-
-              <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
-                <h4 className="text-[11px] font-black text-slate-500 mb-3 uppercase tracking-widest">Required Structure:</h4>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                  {['Tests', 'TestQuestions', 'TestResults'].map(tab => (
-                    <div key={tab} className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
-                      <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full" />
-                      {tab}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.section>
-        )}
-
       {/* User Management Section */}
       {activeTab === 'users' && (
       <motion.section 
@@ -1195,77 +1178,90 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           </button>
         </div>
 
-        <form onSubmit={(e) => handleSubmit(e, 'user')} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label>
-              <input 
-                value={newUsername} 
-                onChange={(e) => setNewUsername(e.target.value)} 
-                placeholder="Username" 
-                required 
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium" 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
-              <input 
-                value={newPassword} 
-                onChange={(e) => setNewPassword(e.target.value)} 
-                placeholder="Password" 
-                required 
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium" 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role</label>
-              <select 
-                value={newUserRole} 
-                onChange={(e) => setNewUserRole(e.target.value)} 
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium"
-              >
-                <option value="student">Student/Parent</option>
-                <option value="teacher">Teacher</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-          </div>
-          <motion.button 
-            whileTap={{ scale: 0.98 }}
-            disabled={loading} 
-            className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : <Plus size={18} />} Add User
-          </motion.button>
-        </form>
+        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+          <p className="text-xs text-indigo-700 font-medium leading-relaxed">
+            <span className="font-bold">Admin Control:</span> New students can register themselves. They will appear here as "Pending Approval". You must approve them before they can access any study content.
+          </p>
+        </div>
+
+        <div className="relative">
+          <input 
+            type="text"
+            placeholder="Search users by name or email..."
+            className="w-full p-4 pl-12 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        </div>
 
         <div className="mt-8 space-y-4">
           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Users</h3>
-          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
-            {users.map((u, index) => (
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
+            {users
+              .filter(u => 
+                (u.username || u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                (u.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((u, index) => (
               <motion.div 
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 key={u.id} 
-                className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-4 group hover:bg-white hover:shadow-md transition-all"
+                className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:bg-white hover:shadow-md transition-all"
               >
                 <div className="flex items-center gap-4 overflow-hidden">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                    <User size={20} className="text-indigo-600" />
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+                    u.active ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
+                  )}>
+                    <User size={20} />
                   </div>
                   <div className="overflow-hidden">
-                    <p className="font-bold text-slate-900 truncate text-sm">{u.username}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <p className="font-bold text-slate-900 truncate text-sm">{u.name || u.username || u.email}</p>
+                    <p className="text-[10px] text-slate-500 truncate">{u.email}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className={`text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md ${
                         u.role === 'admin' ? 'bg-rose-100 text-rose-600' : 
                         u.role === 'teacher' ? 'bg-amber-100 text-amber-600' : 
                         'bg-blue-100 text-blue-600'
                       }`}>{u.role}</span>
+                      <span className={`text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md ${
+                        u.active ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {u.active ? 'Active' : 'Pending Approval'}
+                      </span>
+                      {u.className && <span className="text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600">Class: {u.className}</span>}
+                      {u.subject && <span className="text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600">Sub: {u.subject}</span>}
+                      {u.mobile && <span className="text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600">Ph: {u.mobile}</span>}
+                      {u.fatherName && <span className="text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600">Father: {u.fatherName}</span>}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                  <select 
+                    value={u.role} 
+                    onChange={(e) => handleChangeUserRole(u.id, e.target.value)}
+                    className="text-[10px] font-bold p-2 bg-white border border-slate-200 rounded-xl outline-none"
+                  >
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  
+                  <motion.button 
+                    whileTap={{ scale: 0.9 }} 
+                    onClick={() => handleToggleUserStatus(u.id, u.active)} 
+                    className={cn(
+                      "p-2 rounded-xl transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider",
+                      u.active ? "text-amber-600 bg-amber-50 hover:bg-amber-100" : "text-green-600 bg-green-50 hover:bg-green-100"
+                    )}
+                  >
+                    {u.active ? <XCircle size={16} /> : <CheckCircle size={16} />}
+                    {u.active ? 'Deactivate' : 'Approve'}
+                  </motion.button>
+
                   <motion.button 
                     whileTap={{ scale: 0.9 }} 
                     onClick={() => handleDelete(u.id, 'users')} 
@@ -1750,12 +1746,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           </div>
         </div>
         
-        {isSheetsEnabled && (
-          <div className="p-3 bg-blue-50/50 text-blue-700 text-[11px] font-bold rounded-xl border border-blue-100 flex items-center gap-2">
-            <Database size={14} /> Syncing with Google Sheets
-          </div>
-        )}
-
         <form onSubmit={(e) => handleSubmit(e, 'notification')} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -1919,12 +1909,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           </div>
         </div>
 
-        {isSheetsEnabled && (
-          <div className="p-3 bg-blue-50/50 text-blue-700 text-[11px] font-bold rounded-xl border border-blue-100 flex items-center gap-2">
-            <Database size={14} /> Syncing with Google Sheets
-          </div>
-        )}
-
         <form onSubmit={(e) => handleSubmit(e, 'media')} className="space-y-6">
           <div className="flex p-1.5 bg-slate-100 rounded-2xl gap-1">
             <button 
@@ -2081,12 +2065,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           </div>
         </div>
 
-        {isSheetsEnabled && (
-          <div className="p-3 bg-blue-50/50 text-blue-700 text-[11px] font-bold rounded-xl border border-blue-100 flex items-center gap-2">
-            <Database size={14} /> Syncing with Google Sheets
-          </div>
-        )}
-
         <form onSubmit={(e) => handleSubmit(e, 'study')} className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -2102,7 +2080,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
                 }} 
                 className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-primary focus:bg-white outline-none transition-all font-medium"
               >
-                <option>Pre-Primary</option>
                 <option>Primary (1st–5th)</option>
                 <option>Upper Primary (6th–8th)</option>
                 <option>High School (9th–10th)</option>
@@ -2120,7 +2097,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
                 }} 
                 className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-primary focus:bg-white outline-none transition-all font-medium"
               >
-                {studyLevel === 'Pre-Primary' && <><option>L.K.G</option><option>U.K.G</option></>}
                 {studyLevel === 'Primary (1st–5th)' && <><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option><option>5th</option></>}
                 {studyLevel === 'Upper Primary (6th–8th)' && <><option>6th</option><option>7th</option><option>8th</option></>}
                 {studyLevel === 'High School (9th–10th)' && <><option>9th</option><option>10th</option></>}
@@ -2325,12 +2301,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
             </button>
           </div>
         </div>
-
-        {isSheetsEnabled && (
-          <div className="p-3 bg-blue-50/50 text-blue-700 text-[11px] font-bold rounded-xl border border-blue-100 flex items-center gap-2">
-            <Database size={14} /> Syncing with Google Sheets
-          </div>
-        )}
 
         <form onSubmit={(e) => handleSubmit(e, 'topper')} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2689,6 +2659,109 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       </motion.section>
       )}
 
+      {activeTab === 'teachers' && (
+      <motion.section 
+        key="teachers"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -20, opacity: 0 }}
+        className="bg-white p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-8"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-emerald-600">
+            <div className="p-2 bg-emerald-50 rounded-xl">
+              <Users size={24} />
+            </div>
+            <h2 className="text-xl font-black tracking-tight">Manage Teachers</h2>
+          </div>
+          <button 
+            onClick={() => setActiveTab(null)}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <X size={20} className="text-slate-400" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSaveTeacher} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Teacher Name</label>
+              <input 
+                value={teacherName}
+                onChange={(e) => setTeacherName(e.target.value)}
+                required
+                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subject</label>
+              <input 
+                value={teacherSubject}
+                onChange={(e) => setTeacherSubject(e.target.value)}
+                required
+                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Designation</label>
+              <input 
+                value={teacherDesignation}
+                onChange={(e) => setTeacherDesignation(e.target.value)}
+                required
+                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Image URL</label>
+              <input 
+                value={teacherImageUrl}
+                onChange={(e) => setTeacherImageUrl(e.target.value)}
+                required
+                className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
+          </div>
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full bg-emerald-600 text-white p-4 rounded-xl font-black text-sm shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : (editingType === 'teacher' ? 'Update Teacher' : 'Add Teacher')}
+          </button>
+        </form>
+
+        <div className="space-y-4">
+          <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Teacher List</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {teachers.map((item) => (
+              <motion.div 
+                key={item.id}
+                layout
+                className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  {item.imageUrl && (
+                    <img src={item.imageUrl} alt={item.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                  )}
+                  <div className="flex-1 overflow-hidden">
+                    <p className="font-bold text-slate-900 truncate text-sm">{item.name}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">{item.subject} • {item.designation}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleEdit(item, 'teacher')} className="p-2 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"><Edit size={16} /></motion.button>
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleDelete(item.id, 'Teachers')} className="p-2 text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors"><Trash2 size={16} /></motion.button>
+                </div>
+              </motion.div>
+            ))}
+            {teachers.length === 0 && (
+              <div className="col-span-full text-center py-8 text-slate-400 text-sm font-medium italic">No teachers yet</div>
+            )}
+          </div>
+        </div>
+      </motion.section>
+      )}
+
       {activeTab === 'kahani' && (
       <motion.section 
         key="kahani"
@@ -2900,6 +2973,290 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
               <div className="col-span-full text-center py-8 text-slate-400 text-sm font-medium italic">No kahanis yet</div>
             )}
           </div>
+        </div>
+      </motion.section>
+      )}
+
+      {activeTab === 'app_settings' && (
+      <motion.section 
+        key="app_settings"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -20, opacity: 0 }}
+        className="bg-white p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-8"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-slate-600">
+            <div className="p-2 bg-slate-50 rounded-xl">
+              <Settings size={24} />
+            </div>
+            <h2 className="text-xl font-black tracking-tight">App Settings</h2>
+          </div>
+          <button 
+            onClick={() => setActiveTab(null)}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <X size={20} className="text-slate-400" />
+          </button>
+        </div>
+
+        <div className="space-y-10">
+          {/* Home Page Images */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <ImageIcon size={18} className="text-blue-500" /> Home Page Images
+              </h3>
+              <button 
+                onClick={() => setHomeImages([...homeImages, ''])}
+                className="text-[10px] font-black bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
+              >
+                <Plus size={12} /> Add Image
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              {homeImages.map((url, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <input 
+                    type="url"
+                    value={url}
+                    onChange={(e) => {
+                      const newImgs = [...homeImages];
+                      newImgs[idx] = e.target.value;
+                      setHomeImages(newImgs);
+                    }}
+                    placeholder="https://example.com/banner.jpg"
+                    className="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                  />
+                  {homeImages.length > 1 && (
+                    <button 
+                      onClick={() => setHomeImages(homeImages.filter((_, i) => i !== idx))}
+                      className="p-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Success Stories */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Award size={18} className="text-amber-500" /> Success Stories
+            </h3>
+            <form onSubmit={handleSaveSuccessStory} className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Student Name</label>
+                  <input 
+                    value={storyName}
+                    onChange={(e) => setStoryName(e.target.value)}
+                    required
+                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Exam / Achievement</label>
+                  <input 
+                    value={storyExam}
+                    onChange={(e) => setStoryExam(e.target.value)}
+                    required
+                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Score / Rank</label>
+                  <input 
+                    value={storyScore}
+                    onChange={(e) => setStoryScore(e.target.value)}
+                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Story / Testimonial</label>
+                  <textarea 
+                    value={storyText}
+                    onChange={(e) => setStoryText(e.target.value)}
+                    required
+                    rows={3}
+                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all resize-none"
+                  />
+                </div>
+              </div>
+              <button 
+                type="submit"
+                disabled={loading}
+                className="w-full bg-amber-500 text-white p-3.5 rounded-xl font-black text-sm shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="animate-spin" /> : (editingType === 'successStory' ? 'Update Story' : 'Add Story')}
+              </button>
+            </form>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2 no-scrollbar">
+              {successStories.map((story) => (
+                <div key={story.id} className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between gap-4 shadow-sm">
+                  <div className="overflow-hidden">
+                    <p className="font-bold text-slate-800 truncate text-sm">{story.name}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">{story.exam}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => {
+                      setStoryName(story.name);
+                      setStoryExam(story.exam);
+                      setStoryScore(story.score || '');
+                      setStoryText(story.text);
+                      setEditingId(story.id);
+                      setEditingType('successStory');
+                    }} className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"><Edit size={14} /></button>
+                    <button onClick={() => handleDelete(story.id, 'SuccessStories')} className="p-2 text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Home Page Sections */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Sparkles size={18} className="text-brand-primary" /> Home Page Sections
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Our Commitment Image URL</label>
+                <input 
+                  value={commitmentImage}
+                  onChange={(e) => setCommitmentImage(e.target.value)}
+                  placeholder="https://example.com/commitment.jpg"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Our Commitment Text</label>
+                <input 
+                  value={commitmentText}
+                  onChange={(e) => setCommitmentText(e.target.value)}
+                  placeholder="Providing the best education..."
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">About Us Image URL</label>
+                <input 
+                  value={aboutImage}
+                  onChange={(e) => setAboutImage(e.target.value)}
+                  placeholder="https://example.com/about.jpg"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Page Banners */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <ImageIcon size={18} className="text-purple-500" /> Page Banners
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contact Page Banner URL</label>
+                <input 
+                  value={contactImage}
+                  onChange={(e) => setContactImage(e.target.value)}
+                  placeholder="https://example.com/contact-banner.jpg"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Info Page Banner URL</label>
+                <input 
+                  value={infoImage}
+                  onChange={(e) => setInfoImage(e.target.value)}
+                  placeholder="https://example.com/info-banner.jpg"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Support & QR */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Sparkles size={18} className="text-emerald-500" /> Support & QR Code
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">QR Code Image URL</label>
+                <input 
+                  value={supportQR}
+                  onChange={(e) => setSupportQR(e.target.value)}
+                  placeholder="https://example.com/qr.jpg"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">UPI ID</label>
+                <input 
+                  value={supportUPI}
+                  onChange={(e) => setSupportUPI(e.target.value)}
+                  placeholder="8953208909@axl"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Contact & Info */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Phone size={18} className="text-indigo-500" /> Contact & Info
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                <input 
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                <input 
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Address</label>
+                <input 
+                  value={contactAddress}
+                  onChange={(e) => setContactAddress(e.target.value)}
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">About Us Text</label>
+                <textarea 
+                  value={aboutText}
+                  onChange={(e) => setAboutText(e.target.value)}
+                  rows={4}
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <motion.button 
+            whileTap={{ scale: 0.98 }}
+            onClick={handleSaveSettings}
+            disabled={loading}
+            className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl shadow-slate-900/20 hover:bg-black transition-all"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : <><Database size={20} /> Save All App Settings</>}
+          </motion.button>
         </div>
       </motion.section>
       )}

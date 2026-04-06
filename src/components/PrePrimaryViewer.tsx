@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Undo, Redo, Eraser, X, Play } from 'lucide-react';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 
 interface PrePrimaryViewerProps {
   classname: string;
@@ -37,7 +37,7 @@ export const PrePrimaryViewer: React.FC<PrePrimaryViewerProps> = ({ classname, s
 
       setLoading(true);
       try {
-        const data = await googleSheetsService.fetchSheetData('PrePrimaryContent');
+        const data = await firebaseService.fetchCollection('PrePrimaryContent');
         const found = data.find((item: any) => 
           (item.classname || '').toString() === classname.toString() &&
           (item.subject || '').toLowerCase() === subject.toLowerCase()

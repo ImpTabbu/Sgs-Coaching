@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Play, Search, Filter, ChevronLeft, Volume2, Pause, SkipBack, SkipForward, ChevronRight, Sparkles } from 'lucide-react';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 
 export const StoryCollection = () => {
   const [stories, setStories] = useState<any[]>([]);
@@ -14,9 +14,9 @@ export const StoryCollection = () => {
   useEffect(() => {
     const fetchStories = async () => {
       try {
-        const data = await googleSheetsService.getAllData();
-        const fetchedStories = (data.kahanis || []).map((item: any, index: number) => ({
-          id: `sheet-kahani-${index}`,
+        const kahanisData = await firebaseService.fetchCollection('Kahanis');
+        const fetchedStories = (kahanisData || []).map((item: any, index: number) => ({
+          id: item.id || `sheet-kahani-${index}`,
           title: item.title,
           coverImage: item.coverimage,
           audioUrl: item.audiourl,

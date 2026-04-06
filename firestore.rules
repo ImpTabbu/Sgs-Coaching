@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    //   - email: string (required)
+    //   - name: string (required)
+    //   - role: string (required, 'student', 'teacher', 'admin')
+    //   - active: boolean (required)
+    //   - uid: string (required)
+    // Collection: notifications, gallery, studyMaterials, toppers, tests, testQuestions, testResults, noticeBoard, prePrimaryContent, kahanis, appSettings, teachers, socialLinks, successStories
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (request.auth.token.email == "wanamotivation@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidUser(data) {
+      return data.email is string && 
+             data.name is string && 
+             data.role in ['student', 'teacher', 'admin'] && 
+             data.active is bool;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Users collection
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (needed for app functionality like checking roles)
+      // In a stricter app, we might restrict this, but currently the app fetches all users in AdminPanel
+      allow read: if isAuthenticated();
+      
+      // Users can create their own profile, but cannot make themselves admin or active
+      allow create: if isAuthenticated() && 
+                    isValidUser(request.resource.data) && 
+                    request.resource.data.uid == request.auth.uid &&
+                    (request.resource.data.role in ['student', 'teacher'] || isAdmin()) &&
+                    (request.resource.data.active == false || isAdmin());
+                    
+      // Only admins can update other users (e.g., to activate them or change roles)
+      // Users can update their own profile (except role, active status, and uid)
+      allow update: if isAuthenticated() && 
+                    isValidUser(request.resource.data) && 
+                    (
+                      isAdmin() || 
+                      (
+                        isOwner(userId) && 
+                        uidNotModified() &&
+                        request.resource.data.role == resource.data.role &&
+                        request.resource.data.active == resource.data.active
+                      )
+                    );
+                    
+      allow delete: if isAdmin();
+    }
+
+    // Test Results collection
+    match /testResults/{resultId} {
+      // Users can read their own results, admins can read all
+      allow read: if isAuthenticated();
+      
+      // Users can create their own results
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Only admins can update or delete results
+      allow update, delete: if isAdmin();
+    }
+
+    // Public content collections (Read for authenticated, Admin write)
+    match /notifications/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /gallery/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /studyMaterials/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /toppers/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /tests/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /testQuestions/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /noticeBoard/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /prePrimaryContent/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /kahanis/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /appSettings/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /teachers/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /socialLinks/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /successStories/{id} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+  }
+}

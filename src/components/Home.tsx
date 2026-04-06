@@ -7,7 +7,7 @@ import 'swiper/css/pagination';
 import { TEACHERS } from '@/src/constants';
 import { UserCheck, Building2, BookOpen, Trophy, Send, Loader2, Sparkles, Heart, Phone, MapPin, ArrowRight, PlayCircle, FileText, Award, Bell, Instagram, Facebook, X } from 'lucide-react';
 import { SuccessModal } from './SuccessModal';
-import { googleSheetsService } from '../services/googleSheetsService';
+import { firebaseService } from '../services/firebaseService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/src/lib/utils';
 
@@ -35,7 +35,8 @@ export const Home: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notices, setNotices] = useState<any[]>([]);
   const [loadingNotices, setLoadingNotices] = useState(true);
-  const [settings, setSettings] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>(null);
+  const [successStories, setSuccessStories] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [socialLinks, setSocialLinks] = useState<any[]>([]);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -77,10 +78,16 @@ export const Home: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await googleSheetsService.getAllData();
+        const [noticeBoard, appSettings, successStories, teachers, socialLinks] = await Promise.all([
+          firebaseService.fetchCollection('NoticeBoard'),
+          firebaseService.fetchCollection('AppBasicSettings'),
+          firebaseService.fetchCollection('SuccessStories'),
+          firebaseService.fetchCollection('Teachers'),
+          firebaseService.fetchCollection('SocialLinks')
+        ]);
         
         // Handle Notices
-        const sortedNotices = [...(data.noticeBoard || [])].sort((a, b) => {
+        const sortedNotices = [...(noticeBoard || [])].sort((a, b) => {
           const dateA = a.date ? new Date(a.date).getTime() : 0;
           const dateB = b.date ? new Date(b.date).getTime() : 0;
           return dateB - dateA;
@@ -88,9 +95,18 @@ export const Home: React.FC = () => {
         setNotices(sortedNotices.slice(0, 5));
 
         // Handle Settings, Teachers & Social Links
-        setSettings(data.appSettings || []);
-        setTeachers(data.teachers || []);
-        setSocialLinks(data.socialLinks || []);
+        const generalSettings = appSettings?.find((s: any) => s.id === 'general');
+        if (generalSettings && typeof generalSettings.home_images === 'string') {
+          try {
+            generalSettings.homeImages = JSON.parse(generalSettings.home_images);
+          } catch (e) {
+            generalSettings.homeImages = [];
+          }
+        }
+        setSettings(generalSettings || null);
+        setSuccessStories(successStories || []);
+        setTeachers(teachers || []);
+        setSocialLinks(socialLinks || []);
       } catch (err) {
         console.error("Failed to fetch data:", err);
       } finally {
@@ -111,8 +127,8 @@ export const Home: React.FC = () => {
   };
 
   const getImg = (key: string, fallback: string) => {
-    const setting = settings.find(s => s.settingkey === key || s.key === key);
-    return setting ? setting.settingvalue || setting.value : fallback;
+    if (!settings) return fallback;
+    return settings[key] || fallback;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -228,28 +244,47 @@ export const Home: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
-      {/* Hero Section / Director Intro */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl bg-brand-primary p-6 text-white shadow-md">
-        <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
-        <div className="relative z-10 flex items-center gap-5">
-          <div className="relative">
-            <img
-              src={getImg('home_commitment_image', 'https://picsum.photos/seed/director/200/200')}
-              alt="Coaching Director"
-              className="h-20 w-20 rounded-full object-cover border-2 border-white/20 shadow-sm"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute -bottom-1 -right-1 bg-brand-secondary p-1.5 rounded-lg shadow-sm">
-              <Sparkles size={14} className="text-white" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-hindi text-lg font-bold leading-tight">Our Commitment</h3>
-            <p className="font-hindi text-xs text-white/80 leading-relaxed">
-              Providing the best education and right guidance for every student's bright future.
-            </p>
-          </div>
-        </div>
+      {/* Hero Section / Banner Slider */}
+      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl shadow-md h-48 md:h-64">
+        <Swiper
+          modules={[Autoplay, EffectFade, Pagination]}
+          loop={true}
+          autoplay={{ delay: 4000, disableOnInteraction: false }}
+          effect="fade"
+          pagination={{ clickable: true }}
+          className="h-full w-full"
+        >
+          {settings?.homeImages?.length > 0 ? settings.homeImages.map((url: string, i: number) => (
+            <SwiperSlide key={i}>
+              <img src={url} alt={`Banner ${i+1}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            </SwiperSlide>
+          )) : (
+            <SwiperSlide>
+              <div className="relative h-full w-full bg-brand-primary p-6 text-white flex items-center gap-5">
+                <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+                <div className="relative z-10 flex items-center gap-5">
+                  <div className="relative">
+                    <img
+                      src={getImg('commitment_image', 'https://picsum.photos/seed/director/200/200')}
+                      alt="Coaching Director"
+                      className="h-20 w-20 rounded-full object-cover border-2 border-white/20 shadow-sm aspect-square"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute -bottom-1 -right-1 bg-brand-secondary p-1.5 rounded-lg shadow-sm">
+                      <Sparkles size={14} className="text-white" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-hindi text-lg font-bold leading-tight">Our Commitment</h3>
+                    <p className="font-hindi text-xs text-white/80 leading-relaxed">
+                      {settings?.commitment_text || "Providing the best education and right guidance for every student's bright future."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </SwiperSlide>
+          )}
+        </Swiper>
       </motion.div>
 
       {/* Quick Actions */}
@@ -317,7 +352,7 @@ export const Home: React.FC = () => {
       <motion.div variants={itemVariants} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
         <div className="relative h-48">
           <img
-            src={getImg('home_about_image', 'https://picsum.photos/seed/about/800/400')}
+            src={getImg('about_image', 'https://picsum.photos/seed/about/800/400')}
             alt="Happy students"
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
@@ -330,7 +365,7 @@ export const Home: React.FC = () => {
         </div>
         <div className="p-5 space-y-4">
           <p className="font-hindi text-sm text-slate-600 leading-relaxed">
-            SGS Coaching was founded on the belief that every student has the potential to succeed. We are committed to providing a supportive and motivating learning environment.
+            {settings?.aboutText || "SGS Coaching was founded on the belief that every student has the potential to succeed. We are committed to providing a supportive and motivating learning environment."}
           </p>
           <div className="flex items-center gap-2 text-brand-primary font-medium text-xs bg-brand-primary/5 p-3 rounded-xl">
             <Heart size={14} className="fill-brand-primary" />
@@ -400,10 +435,7 @@ export const Home: React.FC = () => {
           <h3 className="font-hindi text-lg font-bold text-slate-800">Success Stories</h3>
         </div>
         <div className="grid grid-cols-1 gap-4">
-          {[
-            { name: "Rahul Kumar", exam: "Board Exams 2023", score: "98%", text: "SGS Coaching provided me with the best study materials and guidance. The teachers are incredibly supportive." },
-            { name: "Priya Singh", exam: "Competitive Exams", score: "Rank 12", text: "The regular mock tests and personalized attention helped me identify my weak areas and improve significantly." }
-          ].map((story, i) => (
+          {successStories.length > 0 ? successStories.map((story, i) => (
             <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-accent/40" />
               <div className="flex items-center gap-3">
@@ -417,7 +449,9 @@ export const Home: React.FC = () => {
               </div>
               <p className="text-sm text-slate-600 italic">"{story.text}"</p>
             </div>
-          ))}
+          )) : (
+            <p className="text-xs text-slate-400 italic text-center py-4">No success stories yet</p>
+          )}
         </div>
       </motion.div>
 
@@ -433,7 +467,7 @@ export const Home: React.FC = () => {
           </div>
           <div className="bg-slate-50 p-4 rounded-xl w-fit mx-auto border border-slate-100 shadow-inner">
             <img
-              src={getImg('home_support_qr', 'https://picsum.photos/seed/qr/300/300')}
+              src={settings?.supportQR || 'https://picsum.photos/seed/qr/300/300'}
               alt="QR Code"
               className="h-44 w-44 rounded-lg shadow-sm"
               referrerPolicy="no-referrer"
@@ -442,7 +476,7 @@ export const Home: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-center gap-2 bg-slate-50 py-2 px-4 rounded-xl border border-slate-100">
               <span className="text-[10px] font-mono font-bold text-slate-400">UPI:</span>
-              <span className="text-xs font-mono font-bold text-slate-700">8953208909@axl</span>
+              <span className="text-xs font-mono font-bold text-slate-700">{settings?.supportUPI || '8953208909@axl'}</span>
             </div>
             <p className="font-hindi text-[10px] text-slate-500 italic">Your every small contribution means a lot to us</p>
           </div>
@@ -482,13 +516,13 @@ export const Home: React.FC = () => {
               <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
                 <Phone size={14} />
               </div>
-              <span className="text-[10px] font-bold">+91 8953208909</span>
+              <span className="text-[10px] font-bold">{settings?.contactPhone || '+91 8953208909'}</span>
             </div>
             <div className="flex items-center gap-2 text-slate-500">
               <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
                 <MapPin size={14} />
               </div>
-              <span className="text-[10px] font-bold">Ayodhya, UP</span>
+              <span className="text-[10px] font-bold">{settings?.contactAddress || 'Ayodhya, UP'}</span>
             </div>
           </div>
         </div>
