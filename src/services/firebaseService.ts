@@ -45,14 +45,16 @@ class FirebaseService {
       'TestQuestions': 'testQuestions',
       'TestResults': 'testResults',
       'NoticeBoard': 'noticeBoard',
-      'PrePrimaryContent': 'prePrimaryContent',
       'Kahanis': 'kahanis',
       'AppBasicSettings': 'appSettings',
       'Teachers': 'teachers',
       'SocialLinks': 'socialLinks',
       'SuccessStories': 'successStories'
     };
-    return map[tabName] || tabName.toLowerCase();
+    
+    // Return the mapped name if it exists, otherwise return the tabName itself
+    // This allows for both lowercase and original case collections
+    return map[tabName] || tabName;
   }
 
   async fetchCollection(tabName: string): Promise<any[]> {

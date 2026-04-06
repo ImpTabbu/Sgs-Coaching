@@ -3,84 +3,822 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Play 2048 Neon Edition, a fun and addictive game with vibrant neon tiles."
+    />
+    <meta
+      name="keywords"
+      content="2048, neon game, online game, high score, play 2048, free game"
+    />
     <title>2048 Neon Game</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Arial", sans-serif; }
-      body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: #ffffff; text-align: center; overflow: hidden; }
-      h1 { font-size: 2.5rem; color: #700ff9b0; margin-bottom: 20px; }
-      .header-container { display: flex; justify-content: space-between; align-items: center; width: 90vw; max-width: 400px; margin-bottom: 20px; }
-      #score, #high-score { font-size: 1.5rem; font-weight: 600; color: #700ff9b0; }
-      .game-container { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 10px; background-color: #700ff9b0; border-radius: 10px; padding: 10px; width: 90vw; height: 90vw; max-width: 400px; max-height: 400px; touch-action: none; }
-      .tile, .empty { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 2rem; font-weight: bold; border-radius: 10px; color: #fff; }
-      .empty { background-color: #fff; }
-      .tile[data-value="2"] { background: #ff5722; } .tile[data-value="4"] { background: #009688; } .tile[data-value="8"] { background: #3f51b5; }
-      .tile[data-value="16"] { background: #8bc34a; } .tile[data-value="32"] { background: #ffc107; } .tile[data-value="64"] { background: #ff0000; }
-      .icon-button { background-color: #700ff9b0; border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
-      .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; flex-direction: column; color: white; z-index: 100; }
-      .copyright { position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 12px; color: #6b7280; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Arial", sans-serif;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: "Arial", sans-serif;
+        background: #ffffff;
+        text-align: center;
+        overflow: hidden;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        color: #700ff9b0;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 90vw;
+        max-width: 400px;
+        margin-bottom: 20px;
+      }
+
+      .scores-container {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      #score,
+      #high-score {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #700ff9b0;
+        margin: 5px 0;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+      }
+
+      .buttons-container {
+        display: flex;
+        gap: 10px;
+      }
+
+      .game-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(4, 1fr);
+        gap: 10px;
+        background-color: #700ff9b0;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15);
+        width: 90vw;
+        height: 90vw;
+        max-width: 400px;
+        max-height: 400px;
+        position: relative;
+        overflow: hidden;
+        touch-action: none;
+      }
+
+      .tile,
+      .empty {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: calc(1.5rem + 1vw);
+        font-weight: bold;
+        border-radius: 10px;
+        text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+        color: #fff;
+        transition:
+          transform 0.2s ease,
+          background 0.5s ease;
+      }
+
+      .empty {
+        background-color: #fff;
+        box-shadow: 0 0 2px #ffffff;
+      }
+
+      .tile[data-value="2"] {
+        background: #ff5722;
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="4"] {
+        background: #009688;
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="8"] {
+        background: #3f51b5;
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="16"] {
+        background: #8bc34a;
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="32"] {
+        background: #ffc107;
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="64"] {
+        background: #ff0000;
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="128"] {
+        background: #9c27b0;
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="256"] {
+        background: #00bcd4;
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="512"] {
+        background: linear-gradient(45deg, #ffc422, #3f51b5);
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="1024"] {
+        background: linear-gradient(45deg, #8bc34a, #00bcd4);
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .tile[data-value="2048"] {
+        background: linear-gradient(45deg, #365cf4, #9c27b0);
+        box-shadow:
+          rgba(0, 0, 0, 0.4) 0px 2px 4px,
+          rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+          rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+      }
+
+      .icon-button {
+        background-color: #700ff9b0;
+        border: none;
+        color: white;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition:
+          transform 0.2s ease,
+          background-color 0.2s ease;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+
+      .icon-button:hover {
+        transform: scale(1.1);
+        background-color: #700ff9b0;
+      }
+
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        color: white;
+        text-align: center;
+        padding: 20px;
+        z-index: 100;
+        backdrop-filter: blur(8px);
+      }
+
+      .modal h2 {
+        font-size: 3rem;
+        margin-bottom: 30px;
+        color: #6f0ff9;
+        text-shadow:
+          0 0 10px #700ff9b0,
+          0 0 20px #700ff9b0,
+          0 0 30px #700ff9b0;
+        animation: neonPulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes neonPulse {
+        0% {
+          text-shadow:
+            0 0 10px #700ff9b0,
+            0 0 20px #700ff9b0,
+            0 0 30px #700ff9b0;
+        }
+        50% {
+          text-shadow:
+            0 0 20px #700ff9b0,
+            0 0 30px #700ff9b0,
+            0 0 40px #700ff9b0,
+            0 0 50px #700ff9b0;
+        }
+        100% {
+          text-shadow:
+            0 0 10px #700ff9b0,
+            0 0 20px #700ff9b0,
+            0 0 30px #700ff9b0;
+        }
+      }
+
+      .modal button {
+        background: linear-gradient(45deg, #ff00bc, #6f0ff9);
+        color: #fff;
+        font-size: 1.8rem;
+        padding: 15px 30px;
+        border: none;
+        cursor: pointer;
+        border-radius: 25px;
+        margin-top: 30px;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        box-shadow:
+          0 0 20px rgba(0, 204, 255, 0.5),
+          inset 0 0 15px rgba(255, 255, 255, 0.3);
+        transition: all 0.3s ease;
+      }
+
+      .modal button:hover {
+        transform: scale(1.1);
+        box-shadow:
+          0 0 30px rgba(0, 204, 255, 0.7),
+          inset 0 0 20px rgba(255, 255, 255, 0.4);
+      }
+
+      /* --- नया: बैक बटन पॉपअप के लिए CSS --- */
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 250;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        backdrop-filter: blur(5px);
+      }
+
+      .popup-dialog {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        background: #fff;
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid #700ff9b0;
+        box-shadow: 0 0 20px #700ff9b0;
+        z-index: 300;
+        width: 90%;
+        max-width: 350px;
+        text-align: center;
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.3s ease,
+          transform 0.3s ease;
+        color: white;
+      }
+
+      .overlay.active,
+      .popup-dialog.active {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .popup-dialog.active {
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      .popup-dialog h2 {
+        font-size: 1.4rem;
+        margin-bottom: 8px;
+        color: #6f0ff9;
+      }
+
+      .popup-dialog p {
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+        color: #700ff9b0;
+      }
+
+      .popup-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      .popup-btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+      }
+
+      .popup-btn.confirm {
+        background-color: #f44336;
+        color: white;
+        box-shadow: 0 0 10px #f44336;
+      }
+      .popup-btn.confirm:hover {
+        background-color: #d32f2f;
+      }
+
+      .popup-btn.cancel {
+        background-color: #24eb84;
+        color: #fff;
+        border: 1px solid #24eb84;
+      }
+      .popup-btn.cancel:hover {
+        background-color: #24eb84;
+      }
+
+      @media (max-width: 600px) {
+        h1 {
+          font-size: 2.2rem;
+        }
+
+        #score,
+        #high-score {
+          font-size: 1.2rem;
+        }
+
+        .icon-button {
+          width: 40px;
+          height: 40px;
+          font-size: 1.2rem;
+        }
+
+        .modal h2 {
+          font-size: 2.5rem;
+        }
+
+        .modal button {
+          font-size: 1.5rem;
+          padding: 12px 24px;
+        }
+      }
+
+      @media (max-width: 400px) {
+        .game-container {
+          width: 80vw;
+          height: 80vw;
+        }
+
+        .header-container {
+          width: 80vw;
+        }
+
+        .icon-button {
+          width: 35px;
+          height: 35px;
+          font-size: 1rem;
+        }
+
+        .modal h2 {
+          font-size: 2rem;
+        }
+
+        .modal button {
+          font-size: 1.3rem;
+          padding: 10px 20px;
+        }
+      }
+
+      /* Hide audio element */
+      #swipeSound {
+        display: none;
+      }
+      
+      .copyright {
+        position: absolute;
+        bottom: 10px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 12px;
+        color: #6b7280;
+      }
     </style>
   </head>
   <body>
-    <h1>2048 Neon</h1>
+    <h1>2048 Neon Edition</h1>
+
     <div class="header-container">
-      <div id="high-score">Best: 0</div>
-      <div id="score">Score: 0</div>
-      <button id="restart" class="icon-button"><i class="fas fa-redo-alt"></i></button>
+      <div class="scores-container">
+        <div id="high-score">High Score: 0</div>
+        <div id="score">Score: 0</div>
+      </div>
+      <div class="buttons-container">
+        <button id="undo" class="icon-button">
+          <i class="fas fa-undo"></i>
+        </button>
+        <button id="restart" class="icon-button">
+          <i class="fas fa-redo-alt"></i>
+        </button>
+      </div>
     </div>
+
     <div class="game-container" id="game-container"></div>
     <div class="copyright">© SGS Coaching</div>
-    <div id="modal" class="modal"><h2 id="modal-message"></h2><button onclick="location.reload()">Play Again</button></div>
+
+    <div id="modal" class="modal">
+      <h2 id="modal-message"></h2>
+      <button id="restart-modal-button">Play Again</button>
+    </div>
+
+    <!-- Audio element for swipe sound -->
+    <audio id="swipeSound" preload="auto">
+      <source
+        src="https://res.cloudinary.com/tabrej/video/upload/v1747116391/Thumbnail%20Dot/Sound%20Effects/2048%20Game/whoosh2.0_zkabrg_1_dqobml.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
+
+    <!-- --- नया: बैक बटन कन्फर्मेशन के लिए HTML --- -->
+    <div id="back-confirm-overlay" class="overlay"></div>
+    <div id="back-confirm-popup" class="popup-dialog">
+      <h2>Confirm you want to quit?</h2>
+      <p>Your current progress will be lost.</p>
+      <div class="popup-buttons">
+        <button id="confirm-back-btn" class="popup-btn confirm">
+          Yes, Quit
+        </button>
+        <button id="cancel-back-btn" class="popup-btn cancel">
+          No, Continue
+        </button>
+      </div>
+    </div>
+
     <script>
       const gridContainer = document.getElementById("game-container");
       const scoreDisplay = document.getElementById("score");
       const highScoreDisplay = document.getElementById("high-score");
-      let grid = Array(4).fill().map(() => Array(4).fill(0)), score = 0, highScore = localStorage.getItem("highScore") || 0;
-      highScoreDisplay.textContent = `Best: ${highScore}`;
+      const undoButton = document.getElementById("undo");
+      const restartButton = document.getElementById("restart");
+      const modal = document.getElementById("modal");
+      const modalMessage = document.getElementById("modal-message");
+      const restartModalButton = document.getElementById(
+        "restart-modal-button",
+      );
+      const swipeSound = document.getElementById("swipeSound");
+
+      let grid = Array(4)
+        .fill()
+        .map(() => Array(4).fill(0));
+      let previousGrid = [];
+      let score = 0;
+      let highScore = localStorage.getItem("highScore") || 0;
+      let touchStartX = null;
+      let touchStartY = null;
+      let isGameActive = false; // गेम की स्थिति को ट्रैक करने के लिए
+
+      highScoreDisplay.textContent = `High Score: ${highScore}`;
+
+      function playSwipeSound() {
+        if (swipeSound) {
+          swipeSound.currentTime = 0;
+          swipeSound.play().catch((error) => {
+            console.log("Audio playback error:", error);
+          });
+        }
+      }
+
+      function saveState() {
+        previousGrid = grid.map((row) => row.slice());
+      }
+
+      function undoMove() {
+        if (previousGrid.length) {
+          grid = previousGrid.map((row) => row.slice());
+          createGrid();
+        }
+      }
+
       function createGrid() {
         gridContainer.innerHTML = "";
-        for (let r = 0; r < 4; r++) {
-          for (let c = 0; c < 4; c++) {
-            const t = document.createElement("div");
-            if (grid[r][c] === 0) t.className = "empty";
-            else { t.className = "tile"; t.setAttribute("data-value", grid[r][c]); t.textContent = grid[r][c]; }
-            gridContainer.appendChild(t);
+        for (let row = 0; row < 4; row++) {
+          for (let col = 0; col < 4; col++) {
+            const tile = document.createElement("div");
+            if (grid[row][col] === 0) {
+              tile.className = "empty";
+            } else {
+              tile.className = "tile";
+              tile.setAttribute("data-value", grid[row][col]);
+              tile.textContent = grid[row][col];
+            }
+            gridContainer.appendChild(tile);
           }
         }
-        if (score > highScore) { highScore = score; localStorage.setItem("highScore", highScore); highScoreDisplay.textContent = `Best: ${highScore}`; }
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem("highScore", highScore);
+          highScoreDisplay.textContent = `High Score: ${highScore}`;
+        }
       }
-      function addTile() {
-        const empty = [];
-        for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if (grid[r][c] === 0) empty.push({r, c});
-        if (empty.length) { const {r, c} = empty[Math.floor(Math.random() * empty.length)]; grid[r][c] = Math.random() > 0.1 ? 2 : 4; }
+
+      function generateTile() {
+        const emptyTiles = [];
+        for (let row = 0; row < 4; row++) {
+          for (let col = 0; col < 4; col++) {
+            if (grid[row][col] === 0) emptyTiles.push({ row, col });
+          }
+        }
+        if (emptyTiles.length > 0) {
+          const { row, col } =
+            emptyTiles[Math.floor(Math.random() * emptyTiles.length)];
+          grid[row][col] = Math.random() > 0.1 ? 2 : 4;
+        }
       }
+
       function slide(row) {
-        let n = row.filter(v => v !== 0);
-        for (let i = 0; i < n.length - 1; i++) if (n[i] === n[i+1]) { n[i] *= 2; score += n[i]; n[i+1] = 0; }
-        n = n.filter(v => v !== 0); while (n.length < 4) n.push(0); return n;
+        const newRow = row.filter((val) => val !== 0);
+        for (let i = 0; i < newRow.length - 1; i++) {
+          if (newRow[i] === newRow[i + 1]) {
+            newRow[i] *= 2;
+            score += newRow[i];
+            newRow[i + 1] = 0;
+          }
+        }
+        return newRow.filter((val) => val !== 0);
       }
-      function move(dir) {
-        const old = JSON.stringify(grid);
-        if (dir === "up" || dir === "down") grid = grid[0].map((_, c) => grid.map(r => r[c]));
-        if (dir === "down" || dir === "right") grid = grid.map(r => r.reverse());
-        grid = grid.map(r => slide(r));
-        if (dir === "down" || dir === "right") grid = grid.map(r => r.reverse());
-        if (dir === "up" || dir === "down") grid = grid[0].map((_, c) => grid.map(r => r[c]));
-        if (old !== JSON.stringify(grid)) { addTile(); createGrid(); scoreDisplay.textContent = `Score: ${score}`; }
+
+      function move(direction) {
+        saveState();
+        const originalGridString = JSON.stringify(grid);
+
+        let rotated = false;
+        if (direction === "up" || direction === "down") {
+          grid = transpose(grid);
+          rotated = true;
+        }
+        if (direction === "down" || direction === "right") {
+          grid = grid.map((row) => row.reverse());
+        }
+
+        const newGrid = grid.map((row) => {
+          const newRow = slide(row);
+          while (newRow.length < 4) newRow.push(0);
+          return newRow;
+        });
+
+        if (direction === "down" || direction === "right") {
+          newGrid.forEach((row) => row.reverse());
+        }
+        if (rotated) {
+          grid = transpose(newGrid);
+        } else {
+          grid = newGrid;
+        }
+
+        const newGridString = JSON.stringify(grid);
+        const hasChanged = originalGridString !== newGridString;
+
+        if (hasChanged) {
+          playSwipeSound();
+          generateTile();
+          createGrid();
+          scoreDisplay.textContent = `Score: ${score}`;
+
+          if (checkWin()) {
+            isGameActive = false;
+            showMessage(" Congratulations! You've Won! ");
+          } else if (checkLose()) {
+            isGameActive = false;
+            showMessage(" Game Over! Great Effort! ");
+          }
+        }
       }
-      document.getElementById("restart").onclick = () => location.reload();
-      window.onkeydown = (e) => {
-        if (e.key === "ArrowUp") move("up"); if (e.key === "ArrowDown") move("down");
-        if (e.key === "ArrowLeft") move("left"); if (e.key === "ArrowRight") move("right");
-      };
-      let sx, sy;
-      gridContainer.ontouchstart = (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; };
-      gridContainer.ontouchend = (e) => {
-        const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
-        if (Math.abs(dx) > Math.abs(dy)) { if (Math.abs(dx) > 30) move(dx > 0 ? "right" : "left"); }
-        else { if (Math.abs(dy) > 30) move(dy > 0 ? "down" : "up"); }
-      };
-      addTile(); addTile(); createGrid();
+
+      function restartGame() {
+        grid = Array(4)
+          .fill()
+          .map(() => Array(4).fill(0));
+        score = 0;
+        scoreDisplay.textContent = `Score: ${score}`;
+        initGame();
+        modal.style.display = "none";
+      }
+
+      function transpose(grid) {
+        return grid[0].map((_, col) => grid.map((row) => row[col]));
+      }
+
+      function checkWin() {
+        return grid.some((row) => row.includes(2048));
+      }
+
+      function checkLose() {
+        for (let row = 0; row < 4; row++) {
+          for (let col = 0; col < 4; col++) {
+            if (grid[row][col] === 0) return false;
+            if (row < 3 && grid[row][col] === grid[row + 1][col]) return false;
+            if (col < 3 && grid[row][col] === grid[row][col + 1]) return false;
+          }
+        }
+        return true;
+      }
+
+      function showMessage(message) {
+        modal.style.display = "flex";
+        modalMessage.textContent = message;
+      }
+
+      // <<<---  बदलाव यहाँ से शुरू  --->>>
+
+      // popstate इवेंट को संभालने के लिए एक अलग फंक्शन बनाया गया
+      function handlePopState(event) {
+        if (isGameActive) {
+          showBackConfirmation();
+          history.pushState({ inGame: true }, null, "");
+        }
+      }
+
+      function initGame() {
+        generateTile();
+        generateTile();
+        createGrid();
+        score = 0;
+        scoreDisplay.textContent = `Score: ${score}`;
+
+        if (!isGameActive) {
+          isGameActive = true;
+          history.pushState({ inGame: true }, null, "");
+        }
+
+        // गेम शुरू होने पर popstate लिस्नर जोड़ा गया
+        window.addEventListener("popstate", handlePopState);
+      }
+
+      // <<<---  बदलाव यहाँ खत्म  --->>>
+
+      // Touch event handlers
+      gridContainer.addEventListener(
+        "touchstart",
+        (e) => {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          e.preventDefault();
+        },
+        { passive: false },
+      );
+
+      gridContainer.addEventListener(
+        "touchmove",
+        (e) => {
+          e.preventDefault();
+        },
+        { passive: false },
+      );
+
+      gridContainer.addEventListener(
+        "touchend",
+        (e) => {
+          if (!touchStartX || !touchStartY) return;
+          const touchEndX = e.changedTouches[0].clientX;
+          const touchEndY = e.changedTouches[0].clientY;
+          const deltaX = touchEndX - touchStartX;
+          const deltaY = touchEndY - touchStartY;
+          const minSwipeDistance = 30;
+
+          if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            if (Math.abs(deltaX) > minSwipeDistance)
+              move(deltaX > 0 ? "right" : "left");
+          } else {
+            if (Math.abs(deltaY) > minSwipeDistance)
+              move(deltaY > 0 ? "down" : "up");
+          }
+          touchStartX = null;
+          touchStartY = null;
+          e.preventDefault();
+        },
+        { passive: false },
+      );
+
+      // Keyboard controls
+      document.addEventListener("keydown", (e) => {
+        switch (e.key) {
+          case "ArrowUp":
+            move("up");
+            break;
+          case "ArrowDown":
+            move("down");
+            break;
+          case "ArrowLeft":
+            move("left");
+            break;
+          case "ArrowRight":
+            move("right");
+            break;
+        }
+      });
+
+      undoButton.addEventListener("click", undoMove);
+      restartButton.addEventListener("click", restartGame);
+      restartModalButton.addEventListener("click", restartGame);
+
+      // --- नया: बैक बटन पॉपअप के लिए JS लॉजिक ---
+      const backConfirmPopup = document.getElementById("back-confirm-popup");
+      const backConfirmOverlay = document.getElementById(
+        "back-confirm-overlay",
+      );
+
+      function showBackConfirmation() {
+        backConfirmPopup.classList.add("active");
+        backConfirmOverlay.classList.add("active");
+      }
+
+      function hideBackConfirmation() {
+        backConfirmPopup.classList.remove("active");
+        backConfirmOverlay.classList.remove("active");
+      }
+
+      // <<<---  बदलाव यहाँ से शुरू  --->>>
+
+      document
+        .getElementById("confirm-back-btn")
+        .addEventListener("click", () => {
+          hideBackConfirmation();
+          isGameActive = false; // गेम को inactive करें
+
+          // सबसे महत्वपूर्ण: popstate लिस्नर को हटा दें ताकि लूप न बनें
+          window.removeEventListener("popstate", handlePopState);
+
+          // अब पिछले पेज पर जाएं
+          history.back();
+        });
+
+      // <<<---  बदलाव यहाँ खत्म  --->>>
+
+      document
+        .getElementById("cancel-back-btn")
+        .addEventListener("click", hideBackConfirmation);
+
+      // पुराना popstate लिस्नर यहाँ से हटा दिया गया है क्योंकि अब यह initGame() में है
+
+      window.addEventListener("load", () => {
+        swipeSound.load();
+      });
+
+      initGame();
     </script>
   </body>
 </html>

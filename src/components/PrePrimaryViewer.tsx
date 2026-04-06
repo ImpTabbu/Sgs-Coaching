@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Undo, Redo, Eraser, X, Play } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronLeft, ChevronRight, Undo, Redo, Eraser, X } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 
 interface PrePrimaryViewerProps {
@@ -30,18 +30,19 @@ export const PrePrimaryViewer: React.FC<PrePrimaryViewerProps> = ({ classname, s
   useEffect(() => {
     const fetchContent = async () => {
       if (initialContent) return;
-      if (!sheetConfig?.enabled || !sheetConfig.id) {
-        setLoading(false);
-        return;
-      }
 
       setLoading(true);
       try {
         const data = await firebaseService.fetchCollection('PrePrimaryContent');
-        const found = data.find((item: any) => 
-          (item.classname || '').toString() === classname.toString() &&
-          (item.subject || '').toLowerCase() === subject.toLowerCase()
-        );
+        console.log('Fetched PrePrimaryContent:', data); // Debug log
+        const found = data.find((item: any) => {
+          const itemClass = (item.classname || item.className || '').toString().trim().toLowerCase();
+          const targetClass = (classname || '').toString().trim().toLowerCase();
+          const itemSubject = (item.subject || item.Subject || '').toString().trim().toLowerCase();
+          const targetSubject = (subject || '').toString().trim().toLowerCase();
+          
+          return itemClass === targetClass && itemSubject === targetSubject;
+        });
         
         if (found) {
           // Ensure images is an array

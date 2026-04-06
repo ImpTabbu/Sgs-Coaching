@@ -121,7 +121,7 @@ export default function App() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98, y: -10 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="min-h-full"
+                className={`min-h-full relative ${activeTab === 'game_viewer' ? "h-full" : ""}`}
               >
                 {activeTab === 'home' && <Home />}
                 {activeTab === 'study' && (
@@ -180,11 +180,9 @@ export default function App() {
                 )}
                 {activeTab === 'pre_primary_viewer' && (
                   <PrePrimaryViewer 
-                    selectedLevel={selectedLevel} 
-                    selectedClass={selectedClass} 
-                    selectedSubject={selectedSubject}
-                    onBack={() => window.history.back()}
-                    isAdmin={canAccessAdmin}
+                    classname={selectedClass} 
+                    subject={selectedSubject}
+                    onClose={() => window.history.back()}
                     savedDrawingsRef={savedDrawingsRef}
                     sheetConfig={sheetConfig}
                   />
@@ -196,25 +194,6 @@ export default function App() {
                     isAdmin={canAccessAdmin}
                     sheetConfig={sheetConfig}
                   />
-                )}
-                {activeTab === 'game_viewer' && selectedGame && (
-                  <div className="h-full flex flex-col bg-slate-900">
-                    <div className="flex items-center justify-between p-4 bg-slate-800 text-white">
-                      <h2 className="font-bold">{selectedGame.name}</h2>
-                      <button 
-                        onClick={() => window.history.back()}
-                        className="px-4 py-2 bg-slate-700 rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors"
-                      >
-                        Exit Game
-                      </button>
-                    </div>
-                    <iframe 
-                      src={selectedGame.url} 
-                      className="w-full flex-grow border-0 bg-white"
-                      title={selectedGame.name}
-                      sandbox="allow-scripts allow-same-origin"
-                    />
-                  </div>
                 )}
               </motion.div>
             </AnimatePresence>

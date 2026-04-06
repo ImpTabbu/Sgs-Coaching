@@ -142,8 +142,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const handleGameSelect = (name: string, url: string) => {
-    setSelectedGame({ name, url });
-    handleTabChange('game_viewer');
+    window.open(url, '_blank');
     setIsGameMenuOpen(false);
   };
 

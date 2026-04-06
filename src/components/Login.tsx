@@ -47,7 +47,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
     } catch (err: any) {
       console.error(err);
-      setError('Google Sign-In failed! ' + (err.message || ''));
+      if (err.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, don't show a scary error message
+        setError('');
+      } else {
+        setError('Google Sign-In failed! ' + (err.message || ''));
+      }
     } finally {
       setLoading(false);
     }
