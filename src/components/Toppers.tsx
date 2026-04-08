@@ -46,8 +46,8 @@ export const Toppers: React.FC<ToppersProps> = ({ selectedClass, onOpenModal, sh
       // Subscribe to app settings for the banner
       unsubscribeSettings = firebaseService.subscribeToCollection('AppBasicSettings', (data) => {
         const generalSettings = data.find((s: any) => s.id === 'general');
-        if (generalSettings?.topperBanner) {
-          setTopperBanner(generalSettings.topperBanner);
+        if (generalSettings?.topper_banner) {
+          setTopperBanner(generalSettings.topper_banner);
         }
       });
 

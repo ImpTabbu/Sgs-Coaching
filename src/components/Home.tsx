@@ -94,14 +94,39 @@ export const Home: React.FC = () => {
       // Settings
       unsubscribeSettings = firebaseService.subscribeToCollection('AppBasicSettings', (data) => {
         const generalSettings = data.find((s: any) => s.id === 'general');
-        if (generalSettings && typeof generalSettings.home_images === 'string') {
-          try {
-            generalSettings.homeImages = JSON.parse(generalSettings.home_images);
-          } catch (e) {
-            generalSettings.homeImages = [];
+        if (generalSettings) {
+          if (typeof generalSettings.home_images === 'string') {
+            try {
+              generalSettings.homeImages = JSON.parse(generalSettings.home_images);
+            } catch (e) {
+              generalSettings.homeImages = [];
+            }
           }
+          
+          // Map snake_case to camelCase for easier use in component
+          const mappedSettings = {
+            ...generalSettings,
+            contactPhone: generalSettings.contact_phone,
+            contactAddress: generalSettings.contact_address,
+            contactEmail: generalSettings.contact_email,
+            aboutText: generalSettings.about_text,
+            commitmentImage: generalSettings.commitment_image,
+            commitmentText: generalSettings.commitment_text,
+            aboutImage: generalSettings.about_image,
+            contactImage: generalSettings.contact_image,
+            infoImage: generalSettings.info_image,
+            topperBanner: generalSettings.topper_banner,
+            supportQR: generalSettings.support_qr,
+            supportUPI: generalSettings.support_upi,
+            youtubeUrl: generalSettings.youtube_url,
+            instagramUrl: generalSettings.instagram_url,
+            facebookUrl: generalSettings.facebook_url,
+            whatsappNumber: generalSettings.whatsapp_number
+          };
+          setSettings(mappedSettings);
+        } else {
+          setSettings(null);
         }
-        setSettings(generalSettings || null);
       });
 
       // Success Stories
@@ -280,7 +305,7 @@ export const Home: React.FC = () => {
                 <div className="relative z-10 flex items-center gap-5">
                   <div className="relative">
                     <img
-                      src={getImg('commitment_image', 'https://picsum.photos/seed/director/200/200')}
+                      src={getImg('commitmentImage', 'https://picsum.photos/seed/director/200/200')}
                       alt="Coaching Director"
                       className="h-20 w-20 rounded-full object-cover border-2 border-white/20 shadow-sm aspect-square"
                       referrerPolicy="no-referrer"
@@ -292,7 +317,7 @@ export const Home: React.FC = () => {
                   <div className="space-y-1">
                     <h3 className="font-hindi text-lg font-bold leading-tight">Our Commitment</h3>
                     <p className="font-hindi text-xs text-white/80 leading-relaxed">
-                      {settings?.commitment_text || "Providing the best education and right guidance for every student's bright future."}
+                      {settings?.commitmentText || "Providing the best education and right guidance for every student's bright future."}
                     </p>
                   </div>
                 </div>
@@ -367,7 +392,7 @@ export const Home: React.FC = () => {
       <motion.div variants={itemVariants} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
         <div className="relative h-48">
           <img
-            src={getImg('about_image', 'https://picsum.photos/seed/about/800/400')}
+            src={getImg('aboutImage', 'https://picsum.photos/seed/about/800/400')}
             alt="Happy students"
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
@@ -426,7 +451,7 @@ export const Home: React.FC = () => {
             {teachers.length > 0 ? teachers.map((teacher, i) => (
               <SwiperSlide key={i}>
                 <div className="relative h-full w-full">
-                  <img src={teacher.imageUrl} alt={teacher.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  <img src={teacher.imageurl} alt={teacher.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                     <p className="text-white font-bold text-sm">{teacher.name}</p>
                     <p className="text-white/80 text-[10px]">{teacher.subject} • {teacher.designation}</p>
@@ -544,19 +569,70 @@ export const Home: React.FC = () => {
       </motion.div>
 
       {/* Follow Our Journey */}
-      {socialLinks.length > 0 && (
+      {(socialLinks.length > 0 || settings?.youtubeUrl || settings?.instagramUrl || settings?.facebookUrl || settings?.whatsappNumber) && (
         <motion.div variants={itemVariants} className="space-y-4 pt-4">
           <div className="flex items-center gap-4">
             <div className="h-px bg-slate-100 flex-1"></div>
             <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Follow Our Journey</p>
             <div className="h-px bg-slate-100 flex-1"></div>
           </div>
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-center gap-4 flex-wrap">
+            {/* New Settings Social Links */}
+            {settings?.youtubeUrl && (
+              <motion.a 
+                whileTap={{ scale: 0.9 }}
+                href={settings.youtubeUrl} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white shadow-sm border border-slate-100 text-slate-600 hover:text-brand-primary transition-all duration-300"
+                title="YouTube"
+              >
+                <PlayCircle size={22} />
+              </motion.a>
+            )}
+            {settings?.instagramUrl && (
+              <motion.a 
+                whileTap={{ scale: 0.9 }}
+                href={settings.instagramUrl} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white shadow-sm border border-slate-100 text-slate-600 hover:text-brand-primary transition-all duration-300"
+                title="Instagram"
+              >
+                <Instagram size={22} />
+              </motion.a>
+            )}
+            {settings?.facebookUrl && (
+              <motion.a 
+                whileTap={{ scale: 0.9 }}
+                href={settings.facebookUrl} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white shadow-sm border border-slate-100 text-slate-600 hover:text-brand-primary transition-all duration-300"
+                title="Facebook"
+              >
+                <Facebook size={22} />
+              </motion.a>
+            )}
+            {settings?.whatsappNumber && (
+              <motion.a 
+                whileTap={{ scale: 0.9 }}
+                href={`https://wa.me/${settings.whatsappNumber}`} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white shadow-sm border border-slate-100 text-slate-600 hover:text-brand-primary transition-all duration-300"
+                title="WhatsApp"
+              >
+                <Phone size={22} />
+              </motion.a>
+            )}
+
+            {/* Legacy Social Links */}
             {socialLinks.map((social, i) => {
               const Icon = getIcon(social.platform);
               return (
                 <motion.a 
-                  key={i}
+                  key={`legacy-${i}`}
                   whileTap={{ scale: 0.9 }}
                   href={social.url} 
                   target="_blank"

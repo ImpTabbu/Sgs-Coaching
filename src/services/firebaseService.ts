@@ -169,7 +169,7 @@ class FirebaseService {
     });
   }
 
-  async writeToCollection(action: 'add' | 'update' | 'delete', tabName: string, data: any): Promise<{ success: boolean; message: string }> {
+  async writeToCollection(action: 'add' | 'update' | 'delete' | 'set', tabName: string, data: any): Promise<{ success: boolean; message: string }> {
     const colName = this.getCollectionName(tabName);
     try {
       if (action === 'add') {
@@ -181,6 +181,14 @@ class FirebaseService {
         await addDoc(collection(db, colName), docData);
         return { success: true, message: 'Data added successfully.' };
       } 
+      else if (action === 'set') {
+        if (!data.id) throw new Error("Document ID is required for set");
+        const docRef = doc(db, colName, data.id);
+        const docData = { ...data };
+        delete docData.id;
+        await setDoc(docRef, docData, { merge: true });
+        return { success: true, message: 'Data saved successfully.' };
+      }
       else if (action === 'update') {
         if (!data.id) throw new Error("Document ID is required for update");
         const docRef = doc(db, colName, data.id);

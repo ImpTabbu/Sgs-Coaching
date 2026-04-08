@@ -34,10 +34,18 @@ export const Contact: React.FC = () => {
           firebaseService.fetchCollection('SocialLinks')
         ]);
         const generalSettings = appSettings?.find((s: any) => s.id === 'general');
-        setSettings(generalSettings || null);
-        
-        if (generalSettings?.contact_image) {
-          setContactImage(generalSettings.contact_image);
+        if (generalSettings) {
+          const mappedSettings = {
+            ...generalSettings,
+            contactPhone: generalSettings.contact_phone,
+            contactAddress: generalSettings.contact_address,
+            contactEmail: generalSettings.contact_email,
+            contactImage: generalSettings.contact_image
+          };
+          setSettings(mappedSettings);
+          if (mappedSettings.contactImage) {
+            setContactImage(mappedSettings.contactImage);
+          }
         }
         setSocialLinks(socialLinksData || []);
       } catch (err) {

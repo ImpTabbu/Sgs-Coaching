@@ -25,11 +25,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   const [noticeBoard, setNoticeBoard] = useState<any[]>([]);
   const [prePrimaryContent, setPrePrimaryContent] = useState<any[]>([]);
   const [kahanis, setKahanis] = useState<any[]>([]);
-  const [sheetId, setSheetId] = useState('');
-  const [scriptUrl, setScriptUrl] = useState('');
-  const [testSheetId, setTestSheetId] = useState('');
-  const [testScriptUrl, setTestScriptUrl] = useState('');
-  const [isSheetsEnabled, setIsSheetsEnabled] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingType, setEditingType] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -123,6 +118,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   const [aboutImage, setAboutImage] = useState('');
   const [contactImage, setContactImage] = useState('');
   const [infoImage, setInfoImage] = useState('');
+  const [topperBanner, setTopperBanner] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [facebookUrl, setFacebookUrl] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [appSettings, setAppSettings] = useState<any[]>([]);
   
   // Teachers Form
@@ -362,32 +362,57 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           date: item.date,
           createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
           isFromSheet: false
-        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-      } else if (activeTab === 'app_settings') {
+        })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()))      } else if (activeTab === 'app_settings') {
         const [appSettingsData, successStoriesData] = await Promise.all([
           firebaseService.fetchCollection('AppBasicSettings'),
           firebaseService.fetchCollection('SuccessStories')
         ]);
         setAppSettings(appSettingsData);
         
-        const homeImgs = firebaseService.getSetting(appSettingsData, 'home_images', '[]');
-        try {
-          setHomeImages(JSON.parse(homeImgs));
-        } catch (e) {
-          setHomeImages(['']);
+        const general = appSettingsData.find((s: any) => s.id === 'general');
+        if (general) {
+          try {
+            setHomeImages(JSON.parse(general.home_images || '[""]'));
+          } catch (e) {
+            setHomeImages(['']);
+          }
+          setSupportQR(general.support_qr || '');
+          setSupportUPI(general.support_upi || '');
+          setContactPhone(general.contact_phone || '');
+          setContactAddress(general.contact_address || '');
+          setContactEmail(general.contact_email || '');
+          setAboutText(general.about_text || '');
+          setCommitmentImage(general.commitment_image || '');
+          setCommitmentText(general.commitment_text || '');
+          setAboutImage(general.about_image || '');
+          setContactImage(general.contact_image || '');
+          setInfoImage(general.info_image || '');
+          setTopperBanner(general.topper_banner || '');
+          setYoutubeUrl(general.youtube_url || '');
+          setInstagramUrl(general.instagram_url || '');
+          setFacebookUrl(general.facebook_url || '');
+          setWhatsappNumber(general.whatsapp_number || '');
+        } else {
+          // Fallback to individual keys if 'general' doc doesn't exist yet
+          const homeImgs = firebaseService.getSetting(appSettingsData, 'home_images', '[]');
+          try {
+            setHomeImages(JSON.parse(homeImgs));
+          } catch (e) {
+            setHomeImages(['']);
+          }
+          setSupportQR(firebaseService.getSetting(appSettingsData, 'support_qr', ''));
+          setSupportUPI(firebaseService.getSetting(appSettingsData, 'support_upi', ''));
+          setContactPhone(firebaseService.getSetting(appSettingsData, 'contact_phone', ''));
+          setContactAddress(firebaseService.getSetting(appSettingsData, 'contact_address', ''));
+          setContactEmail(firebaseService.getSetting(appSettingsData, 'contact_email', ''));
+          setAboutText(firebaseService.getSetting(appSettingsData, 'about_text', ''));
+          setCommitmentImage(firebaseService.getSetting(appSettingsData, 'commitment_image', ''));
+          setCommitmentText(firebaseService.getSetting(appSettingsData, 'commitment_text', ''));
+          setAboutImage(firebaseService.getSetting(appSettingsData, 'about_image', ''));
+          setContactImage(firebaseService.getSetting(appSettingsData, 'contact_image', ''));
+          setInfoImage(firebaseService.getSetting(appSettingsData, 'info_image', ''));
+          setTopperBanner(firebaseService.getSetting(appSettingsData, 'topper_banner', ''));
         }
-        
-        setSupportQR(firebaseService.getSetting(appSettingsData, 'support_qr', ''));
-        setSupportUPI(firebaseService.getSetting(appSettingsData, 'support_upi', ''));
-        setContactPhone(firebaseService.getSetting(appSettingsData, 'contact_phone', ''));
-        setContactAddress(firebaseService.getSetting(appSettingsData, 'contact_address', ''));
-        setContactEmail(firebaseService.getSetting(appSettingsData, 'contact_email', ''));
-        setAboutText(firebaseService.getSetting(appSettingsData, 'about_text', ''));
-        setCommitmentImage(firebaseService.getSetting(appSettingsData, 'commitment_image', ''));
-        setCommitmentText(firebaseService.getSetting(appSettingsData, 'commitment_text', ''));
-        setAboutImage(firebaseService.getSetting(appSettingsData, 'about_image', ''));
-        setContactImage(firebaseService.getSetting(appSettingsData, 'contact_image', ''));
-        setInfoImage(firebaseService.getSetting(appSettingsData, 'info_image', ''));
 
         setSuccessStories(successStoriesData.map((item: any) => ({
           id: item.id,
@@ -406,20 +431,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const savedSheetId = localStorage.getItem('sheetId') || '1p4-W7nFbvVapwUX-8QUedWlPoVY0TEkhkS18pywbtd0';
-    const savedScriptUrl = localStorage.getItem('scriptUrl') || '';
-    const savedTestSheetId = localStorage.getItem('testSheetId') || '';
-    const savedTestScriptUrl = localStorage.getItem('testScriptUrl') || '';
-    const savedEnabled = localStorage.getItem('isSheetsEnabled') !== 'false';
-
-    setSheetId(savedSheetId);
-    setScriptUrl(savedScriptUrl);
-    setTestSheetId(savedTestSheetId);
-    setTestScriptUrl(savedTestScriptUrl);
-    setIsSheetsEnabled(savedEnabled);
-  }, []);
 
   useEffect(() => {
     if (activeTab) {
@@ -587,8 +598,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       };
       const tabName = tabMap[colName] || colName;
       
-      // Normalize keys for Sheets (lowercase, no spaces) to match GAS normalization
-      let sheetData: any = {};
+      // Normalize keys (lowercase, no spaces) for consistency
+      let normalizedData: any = {};
       Object.keys(data).forEach(key => {
         if (key !== 'createdAt') {
           const normalizedKey = key.toLowerCase().replace(/\s+/g, '');
@@ -596,14 +607,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
             value = JSON.stringify(value);
           }
-          sheetData[normalizedKey] = value;
+          normalizedData[normalizedKey] = value;
         }
       });
 
-      if (type === 'media') sheetData.type = mediaType === 'photos' ? 'Photo' : 'Video';
-
-      const isTestRelated = ['tests', 'test_questions', 'test_results'].includes(colName);
-      const writeConfig = isTestRelated && testSheetId ? { sheetId: testSheetId, scriptUrl: testScriptUrl || undefined } : undefined;
+      if (type === 'media') normalizedData.type = mediaType === 'photos' ? 'Photo' : 'Video';
 
       if (editingId && editingType === type) {
         let item: any = null;
@@ -617,9 +625,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
         else if (type === 'pre_primary') item = prePrimaryContent.find(p => p.id === editingId);
         else if (type === 'kahani') item = kahanis.find(k => k.id === editingId);
         
-        if (item && item.id) sheetData.id = item.id;
+        if (item && item.id) normalizedData.id = item.id;
 
-        const result = await firebaseService.writeToCollection('update', tabName, sheetData);
+        const result = await firebaseService.writeToCollection('update', tabName, normalizedData);
         if (result.success) {
           setSuccess(result.message);
           setEditingId(null);
@@ -629,7 +637,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           throw new Error(result.message);
         }
       } else {
-        const result = await firebaseService.writeToCollection('add', tabName, sheetData);
+        const result = await firebaseService.writeToCollection('add', tabName, normalizedData);
         if (result.success) {
           setSuccess(result.message);
           fetchAllData();
@@ -875,114 +883,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
     setKahaniTitle(''); setKahaniCoverImage(''); setKahaniAudioUrl(''); setKahaniMoral(''); setKahaniContent([{ type: 'paragraph', value: '' }]); setKahaniCategory('Popular Stories');
   };
 
-  const handleSaveMainConfig = () => {
-    setLoading(true);
-    try {
-      localStorage.setItem('sheetId', sheetId);
-      localStorage.setItem('scriptUrl', scriptUrl);
-      localStorage.setItem('isSheetsEnabled', String(isSheetsEnabled));
-      setSuccess('Main Configuration saved successfully!');
-      if (isSheetsEnabled && sheetId) {
-        fetchAllData();
-      }
-    } catch (err: any) {
-      setError(`Failed to save main config: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRunSetup = async () => {
-    setLoading(true);
-    try {
-      // Setup is no longer needed for Firebase
-      setSuccess('Firebase is active. No setup required.');
-    } catch (err) {
-      setError('An error occurred during setup.');
-    } finally {
-      setLoading(false);
-      setTimeout(() => {
-        setSuccess('');
-        setError('');
-      }, 5000);
-    }
-  };
-
-  const handleRunTestSetup = async () => {
-    setLoading(true);
-    try {
-      // Setup is no longer required for Firebase
-      setSuccess('Firebase Test Series configuration saved successfully!');
-    } catch (err) {
-      setError('An error occurred during setup.');
-    } finally {
-      setLoading(false);
-      setTimeout(() => {
-        setSuccess('');
-        setError('');
-      }, 5000);
-    }
-  };
-
-  const handleSaveTestConfig = () => {
-    setLoading(true);
-    try {
-      localStorage.setItem('testSheetId', testSheetId);
-      localStorage.setItem('testScriptUrl', testScriptUrl);
-      setSuccess('Test Series Configuration saved successfully!');
-      if (isSheetsEnabled && testSheetId) {
-        fetchAllData();
-      }
-    } catch (err: any) {
-      setError(`Failed to save test config: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTestMainConnection = async () => {
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    try {
-      // Test connection is always successful with Firebase if initialized properly
-      setSuccess('Connected successfully to Firebase!');
-    } catch (err: any) {
-      setError(`Test failed: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
     try {
-      const settingsToSave = [
-        { key: 'home_images', value: JSON.stringify(homeImages.filter(img => img.trim() !== '')) },
-        { key: 'support_qr', value: supportQR },
-        { key: 'support_upi', value: supportUPI },
-        { key: 'contact_phone', value: contactPhone },
-        { key: 'contact_address', value: contactAddress },
-        { key: 'contact_email', value: contactEmail },
-        { key: 'about_text', value: aboutText },
-        { key: 'commitment_image', value: commitmentImage },
-        { key: 'commitment_text', value: commitmentText },
-        { key: 'about_image', value: aboutImage },
-        { key: 'contact_image', value: contactImage },
-        { key: 'info_image', value: infoImage }
-      ];
+      const settingsData = {
+        id: 'general',
+        home_images: JSON.stringify(homeImages.filter(img => img.trim() !== '')),
+        support_qr: supportQR,
+        support_upi: supportUPI,
+        contact_phone: contactPhone,
+        contact_address: contactAddress,
+        contact_email: contactEmail,
+        about_text: aboutText,
+        commitment_image: commitmentImage,
+        commitment_text: commitmentText,
+        about_image: aboutImage,
+        contact_image: contactImage,
+        info_image: infoImage,
+        topper_banner: topperBanner,
+        youtube_url: youtubeUrl,
+        instagram_url: instagramUrl,
+        facebook_url: facebookUrl,
+        whatsapp_number: whatsappNumber
+      };
 
-      for (const setting of settingsToSave) {
-        const existing = appSettings.find(s => s.key === setting.key);
-        if (existing) {
-          await firebaseService.writeToCollection('update', 'AppBasicSettings', { id: existing.id, ...setting });
-        } else {
-          await firebaseService.writeToCollection('add', 'AppBasicSettings', setting);
-        }
-      }
+      await firebaseService.writeToCollection('set', 'AppBasicSettings', settingsData);
 
       setSuccess('App settings updated successfully!');
       fetchAllData();
@@ -2740,8 +2668,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
                 className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all"
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  {item.imageUrl && (
-                    <img src={item.imageUrl} alt={item.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                  {item.imageurl && (
+                    <img src={item.imageurl} alt={item.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
                   )}
                   <div className="flex-1 overflow-hidden">
                     <p className="font-bold text-slate-900 truncate text-sm">{item.name}</p>
@@ -3177,6 +3105,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
                   className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
                 />
               </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Toppers Page Banner URL</label>
+                <input 
+                  value={topperBanner}
+                  onChange={(e) => setTopperBanner(e.target.value)}
+                  placeholder="https://example.com/topper-banner.jpg"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                />
+              </div>
             </div>
           </div>
 
@@ -3202,6 +3139,51 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
                   onChange={(e) => setSupportUPI(e.target.value)}
                   placeholder="8953208909@axl"
                   className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Social Links */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Sparkles size={18} className="text-rose-500" /> Social Media Links
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">YouTube URL</label>
+                <input 
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  placeholder="https://youtube.com/@channel"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Instagram URL</label>
+                <input 
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  placeholder="https://instagram.com/profile"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Facebook URL</label>
+                <input 
+                  value={facebookUrl}
+                  onChange={(e) => setFacebookUrl(e.target.value)}
+                  placeholder="https://facebook.com/page"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp Number</label>
+                <input 
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="918953208909"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
                 />
               </div>
             </div>

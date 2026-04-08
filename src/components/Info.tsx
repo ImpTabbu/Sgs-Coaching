@@ -30,10 +30,16 @@ export const Info: React.FC = () => {
       try {
         const appSettings = await firebaseService.fetchCollection('AppBasicSettings');
         const generalSettings = appSettings?.find((s: any) => s.id === 'general');
-        setSettings(generalSettings || null);
-        
-        if (generalSettings?.info_image) {
-          setInfoImage(generalSettings.info_image);
+        if (generalSettings) {
+          const mappedSettings = {
+            ...generalSettings,
+            infoImage: generalSettings.info_image,
+            aboutText: generalSettings.about_text
+          };
+          setSettings(mappedSettings);
+          if (mappedSettings.infoImage) {
+            setInfoImage(mappedSettings.infoImage);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch info image:", err);
