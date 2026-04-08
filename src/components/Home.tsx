@@ -76,26 +76,24 @@ export const Home: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [noticeBoard, appSettings, successStories, teachers, socialLinks] = await Promise.all([
-          firebaseService.fetchCollection('NoticeBoard'),
-          firebaseService.fetchCollection('AppBasicSettings'),
-          firebaseService.fetchCollection('SuccessStories'),
-          firebaseService.fetchCollection('Teachers'),
-          firebaseService.fetchCollection('SocialLinks')
-        ]);
-        
-        // Handle Notices
-        const sortedNotices = [...(noticeBoard || [])].sort((a, b) => {
-          const dateA = a.date ? new Date(a.date).getTime() : 0;
-          const dateB = b.date ? new Date(b.date).getTime() : 0;
-          return dateB - dateA;
-        });
-        setNotices(sortedNotices.slice(0, 5));
+    let unsubscribeNotices: (() => void) | undefined;
+    let unsubscribeSettings: (() => void) | undefined;
+    let unsubscribeStories: (() => void) | undefined;
+    let unsubscribeTeachers: (() => void) | undefined;
+    let unsubscribeSocial: (() => void) | undefined;
 
-        // Handle Settings, Teachers & Social Links
-        const generalSettings = appSettings?.find((s: any) => s.id === 'general');
+    const setupSubscriptions = () => {
+      setLoadingNotices(true);
+
+      // Notices
+      unsubscribeNotices = firebaseService.subscribeToCollection('NoticeBoard', (data) => {
+        setNotices(data.slice(0, 5));
+        setLoadingNotices(false);
+      });
+
+      // Settings
+      unsubscribeSettings = firebaseService.subscribeToCollection('AppBasicSettings', (data) => {
+        const generalSettings = data.find((s: any) => s.id === 'general');
         if (generalSettings && typeof generalSettings.home_images === 'string') {
           try {
             generalSettings.homeImages = JSON.parse(generalSettings.home_images);
@@ -104,16 +102,33 @@ export const Home: React.FC = () => {
           }
         }
         setSettings(generalSettings || null);
-        setSuccessStories(successStories || []);
-        setTeachers(teachers || []);
-        setSocialLinks(socialLinks || []);
-      } catch (err) {
-        console.error("Failed to fetch data:", err);
-      } finally {
-        setLoadingNotices(false);
-      }
+      });
+
+      // Success Stories
+      unsubscribeStories = firebaseService.subscribeToCollection('SuccessStories', (data) => {
+        setSuccessStories(data);
+      });
+
+      // Teachers
+      unsubscribeTeachers = firebaseService.subscribeToCollection('Teachers', (data) => {
+        setTeachers(data);
+      });
+
+      // Social Links
+      unsubscribeSocial = firebaseService.subscribeToCollection('SocialLinks', (data) => {
+        setSocialLinks(data);
+      });
     };
-    fetchData();
+
+    setupSubscriptions();
+
+    return () => {
+      if (unsubscribeNotices) unsubscribeNotices();
+      if (unsubscribeSettings) unsubscribeSettings();
+      if (unsubscribeStories) unsubscribeStories();
+      if (unsubscribeTeachers) unsubscribeTeachers();
+      if (unsubscribeSocial) unsubscribeSocial();
+    };
   }, []);
 
   const getIcon = (iconName: string) => {

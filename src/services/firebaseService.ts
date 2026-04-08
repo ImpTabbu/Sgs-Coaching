@@ -108,10 +108,17 @@ class FirebaseService {
     return map[tabName] || tabName;
   }
 
-  async fetchCollection(tabName: string): Promise<any[]> {
+  async fetchCollection(tabName: string, filters?: { field: string; value: any }[]): Promise<any[]> {
     const colName = this.getCollectionName(tabName);
     try {
-      const q = query(collection(db, colName));
+      let q = query(collection(db, colName));
+      
+      if (filters) {
+        filters.forEach(f => {
+          q = query(q, where(f.field, '==', f.value));
+        });
+      }
+
       const querySnapshot = await getDocs(q);
       
       const data: any[] = [];
@@ -201,23 +208,20 @@ class FirebaseService {
   async login(username: string, password: string): Promise<{ success: boolean; user?: any; message?: string }> {
     try {
       const colName = this.getCollectionName('Users');
-      const q = query(collection(db, colName));
+      const q = query(collection(db, colName), where('username', '==', username.trim()));
       const querySnapshot = await getDocs(q);
       
-      const users: any[] = [];
-      querySnapshot.forEach((doc) => {
-        users.push({ id: doc.id, ...doc.data() });
-      });
+      if (querySnapshot.empty) {
+        return { success: false, message: 'Invalid username or password.' };
+      }
 
-      const user = users.find(u => 
-        String(u.username || u.Username || '').trim() === username.trim() && 
-        String(u.password || u.Password || '').trim() === password.trim()
-      );
-      
-      if (user) {
+      const userDoc = querySnapshot.docs[0];
+      const user = { id: userDoc.id, ...userDoc.data() } as any;
+
+      if (String(user.password || '').trim() === password.trim()) {
         return { success: true, user };
       } else {
-        return { success: false, message: 'Invalid username or password. Please contact your administrator if you need an account.' };
+        return { success: false, message: 'Invalid username or password.' };
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -238,11 +242,12 @@ class FirebaseService {
       if (docSnap.exists()) {
         return { success: true, data: { id: docSnap.id, ...docSnap.data() } };
       } else {
-        // Fallback: check if user exists by email if uid is not found directly
-        const users = await this.fetchCollection('Users');
-        const user = users.find(u => u.uid === uid || u.id === uid);
-        if (user) {
-          return { success: true, data: user };
+        // Fallback: query by uid field if doc ID is not the uid
+        const q = query(collection(db, 'users'), where('uid', '==', uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0];
+          return { success: true, data: { id: userDoc.id, ...userDoc.data() } };
         }
         return { success: false, message: 'User profile not found.' };
       }

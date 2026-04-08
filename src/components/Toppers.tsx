@@ -37,46 +37,45 @@ export const Toppers: React.FC<ToppersProps> = ({ selectedClass, onOpenModal, sh
   const [topperBanner, setTopperBanner] = useState<string>('');
 
   useEffect(() => {
-    const fetchToppers = async () => {
+    let unsubscribeToppers: (() => void) | undefined;
+    let unsubscribeSettings: (() => void) | undefined;
+
+    const setupSubscriptions = () => {
       setLoading(true);
       
-      try {
-        const [appSettings, toppersData] = await Promise.all([
-          firebaseService.fetchCollection('AppBasicSettings'),
-          firebaseService.fetchCollection('Toppers')
-        ]);
-        const generalSettings = appSettings?.find((s: any) => s.id === 'general');
+      // Subscribe to app settings for the banner
+      unsubscribeSettings = firebaseService.subscribeToCollection('AppBasicSettings', (data) => {
+        const generalSettings = data.find((s: any) => s.id === 'general');
         if (generalSettings?.topperBanner) {
           setTopperBanner(generalSettings.topperBanner);
         }
+      });
 
-        if (sheetConfig?.enabled && sheetConfig.id) {
-          const sheetData = toppersData || [];
-          const mappedSheetData = sheetData.filter((t: any) => 
-            (t.classname || '').toString() === (selectedClass || '').toString()
-          ).map((item: any, index: number) => ({
-            id: `sheet-topper-${index}`,
-            name: item.name || 'Unknown',
-            className: item.classname || '',
-            imageUrl: item.imageurl || '',
-            description: item.description || '',
-            date: item.date || '',
-            createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-            isFromSheet: true,
-          }));
-          setToppers(mappedSheetData.sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-        } else {
-          setToppers([]);
-        }
-      } catch (err) {
-        console.error('Error fetching toppers data:', err);
-      } finally {
+      // Subscribe to toppers filtered by class
+      const filters = [{ field: 'classname', value: selectedClass }];
+      unsubscribeToppers = firebaseService.subscribeToCollection('Toppers', (data) => {
+        const mappedData = data.map((item) => ({
+          id: item.id,
+          name: item.name || 'Unknown',
+          className: item.classname || '',
+          imageUrl: item.imageurl || '',
+          description: item.description || '',
+          date: item.date || '',
+          createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+          isFromSheet: false,
+        }));
+        setToppers(mappedData);
         setLoading(false);
-      }
+      }, filters);
     };
 
-    fetchToppers();
-  }, [selectedClass, sheetConfig]);
+    setupSubscriptions();
+
+    return () => {
+      if (unsubscribeToppers) unsubscribeToppers();
+      if (unsubscribeSettings) unsubscribeSettings();
+    };
+  }, [selectedClass]);
 
   return (
     <div className="p-6 space-y-8 bg-background min-h-screen pb-24 pt-6">

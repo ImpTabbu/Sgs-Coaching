@@ -12,11 +12,13 @@ export const StoryCollection = () => {
   const [recentlyWatched, setRecentlyWatched] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchStories = async () => {
-      try {
-        const kahanisData = await firebaseService.fetchCollection('Kahanis');
-        const fetchedStories = (kahanisData || []).map((item: any, index: number) => ({
-          id: item.id || `sheet-kahani-${index}`,
+    let unsubscribe: (() => void) | undefined;
+
+    const setupSubscription = () => {
+      setLoading(true);
+      unsubscribe = firebaseService.subscribeToCollection('Kahanis', (data) => {
+        const fetchedStories = data.map((item) => ({
+          id: item.id,
           title: item.title,
           coverImage: item.coverimage,
           audioUrl: item.audiourl,
@@ -24,17 +26,13 @@ export const StoryCollection = () => {
           content: item.content ? (typeof item.content === 'string' ? JSON.parse(item.content) : item.content) : [],
           category: item.category || 'Popular Stories',
           createdAt: item.createdat ? new Date(item.createdat) : new Date(),
-        })).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
-        
+        }));
         setStories(fetchedStories);
-      } catch (error) {
-        console.error('Failed to fetch stories:', error);
-      } finally {
         setLoading(false);
-      }
+      });
     };
 
-    fetchStories();
+    setupSubscription();
     
     // Load recently watched
     const saved = localStorage.getItem('recentlyWatchedStories');
@@ -45,6 +43,10 @@ export const StoryCollection = () => {
         console.error('Failed to parse recently watched stories');
       }
     }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const categories = ['All', ...Array.from(new Set(stories.map(s => s.category)))];

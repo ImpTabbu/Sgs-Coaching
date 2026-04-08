@@ -28,14 +28,13 @@ export const PrePrimaryViewer: React.FC<PrePrimaryViewerProps> = ({ classname, s
   const getDrawingKey = (index: number) => `${classname}-${subject}-${index}`;
 
   useEffect(() => {
-    const fetchContent = async () => {
-      if (initialContent) return;
+    if (initialContent) return;
 
+    let unsubscribe: (() => void) | undefined;
+
+    const setupSubscription = () => {
       setLoading(true);
-      try {
-        const data = await firebaseService.fetchCollection('prePrimaryContent');
-        console.log('Fetched prePrimaryContent:', data); // Debug log
-        
+      unsubscribe = firebaseService.subscribeToCollection('prePrimaryContent', (data) => {
         const normalize = (str: string) => (str || '').toString().replace(/\./g, '').replace(/\s+/g, ' ').trim().toLowerCase();
         
         const found = data.find((item: any) => {
@@ -59,15 +58,16 @@ export const PrePrimaryViewer: React.FC<PrePrimaryViewerProps> = ({ classname, s
           }
           setContent(found);
         }
-      } catch (error) {
-        console.error('Error fetching Pre-Primary content:', error);
-      } finally {
         setLoading(false);
-      }
+      });
     };
 
-    fetchContent();
-  }, [classname, subject, initialContent, sheetConfig]);
+    setupSubscription();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [classname, subject, initialContent]);
 
   // Parse image URLs
   const imageUrls = Array.isArray(content?.images) ? content.images : [];
