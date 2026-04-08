@@ -10,6 +10,7 @@ import {
   query, 
   orderBy, 
   getDoc,
+  where,
   onSnapshot
 } from 'firebase/firestore';
 
@@ -118,14 +119,7 @@ class FirebaseService {
         data.push({ id: doc.id, ...doc.data() });
       });
       
-      data.sort((a, b) => {
-        if (a.createdat && b.createdat) {
-          return new Date(b.createdat).getTime() - new Date(a.createdat).getTime();
-        }
-        return 0;
-      });
-
-      return data;
+      return this.sortData(data);
     } catch (error: any) {
       if (error.code === 'permission-denied') {
         handleFirestoreError(error, OperationType.LIST, colName);
@@ -133,6 +127,39 @@ class FirebaseService {
       console.error(`Error fetching collection ${tabName}:`, error);
       return [];
     }
+  }
+
+  subscribeToCollection(tabName: string, callback: (data: any[]) => void, filters?: { field: string; value: any }[]): () => void {
+    const colName = this.getCollectionName(tabName);
+    let q = query(collection(db, colName));
+    
+    if (filters) {
+      filters.forEach(f => {
+        q = query(q, where(f.field, '==', f.value));
+      });
+    }
+    
+    return onSnapshot(q, (snapshot) => {
+      const data: any[] = [];
+      snapshot.forEach((doc) => {
+        data.push({ id: doc.id, ...doc.data() });
+      });
+      callback(this.sortData(data));
+    }, (error) => {
+      if (error.code === 'permission-denied') {
+        handleFirestoreError(error, OperationType.LIST, colName);
+      }
+      console.error(`Error subscribing to ${tabName}:`, error);
+    });
+  }
+
+  private sortData(data: any[]): any[] {
+    return [...data].sort((a, b) => {
+      if (a.createdat && b.createdat) {
+        return new Date(b.createdat).getTime() - new Date(a.createdat).getTime();
+      }
+      return 0;
+    });
   }
 
   async writeToCollection(action: 'add' | 'update' | 'delete', tabName: string, data: any): Promise<{ success: boolean; message: string }> {
@@ -169,36 +196,6 @@ class FirebaseService {
       console.error(`Error writing to collection ${tabName}:`, error);
       return { success: false, message: error.message || 'Failed to write to database.' };
     }
-  }
-
-  async getAllData(): Promise<AppData> {
-    const [
-      notifications, gallery, studyMaterials, toppers, users, 
-      noticeBoard, prePrimaryContent, kahanis, appSettings, teachers, socialLinks,
-      successStories, tests, testQuestions, testResults
-    ] = await Promise.all([
-      this.fetchCollection('Notifications'),
-      this.fetchCollection('Gallery'),
-      this.fetchCollection('StudyMaterials'),
-      this.fetchCollection('Toppers'),
-      this.fetchCollection('Users'),
-      this.fetchCollection('NoticeBoard'),
-      this.fetchCollection('prePrimaryContent'),
-      this.fetchCollection('Kahanis'),
-      this.fetchCollection('AppBasicSettings'),
-      this.fetchCollection('Teachers'),
-      this.fetchCollection('SocialLinks'),
-      this.fetchCollection('SuccessStories'),
-      this.fetchCollection('Tests'),
-      this.fetchCollection('TestQuestions'),
-      this.fetchCollection('TestResults')
-    ]);
-
-    return {
-      notifications, gallery, studyMaterials, toppers, users, 
-      noticeBoard, prePrimaryContent, kahanis, appSettings, teachers, socialLinks,
-      successStories, tests, testQuestions, testResults
-    };
   }
 
   async login(username: string, password: string): Promise<{ success: boolean; user?: any; message?: string }> {

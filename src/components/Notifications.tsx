@@ -33,13 +33,13 @@ export const Notifications: React.FC<NotificationsProps> = ({ isAdmin, onEdit, s
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedNotif, setSelectedNotif] = useState<any | null>(null);
 
-  const fetchNotifications = async () => {
-    setLoading(true);
-    
-    if (sheetConfig?.enabled && sheetConfig.id) {
-      try {
-        const sheetData = await firebaseService.fetchCollection('Notifications');
-        const mappedSheetData = sheetData.map((item, index) => ({
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    const setupSubscription = () => {
+      setLoading(true);
+      unsubscribe = firebaseService.subscribeToCollection('Notifications', (data) => {
+        const mappedData = data.map((item) => ({
           id: item.id,
           title: item.title || item.notificationtitle || 'No Title',
           message: item.message || item.notificationmessage || '',
@@ -48,22 +48,18 @@ export const Notifications: React.FC<NotificationsProps> = ({ isAdmin, onEdit, s
           type: item.type || 'Announcement',
           createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
           isFromSheet: false
-        })).sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
-        setNotifications(mappedSheetData);
-      } catch (err) {
-        console.error('Error fetching sheet data:', err);
-      } finally {
+        }));
+        setNotifications(mappedData);
         setLoading(false);
-      }
-    } else {
-      setNotifications([]);
-      setLoading(false);
-    }
-  };
+      });
+    };
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [sheetConfig]);
+    setupSubscription();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   const handleDelete = async (id: string) => {
     setDeleteId(id);
@@ -77,7 +73,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ isAdmin, onEdit, s
       if (item && item.id) {
         const result = await firebaseService.writeToCollection('delete', 'Notifications', { id: item.id });
         if (result.success) {
-          fetchNotifications();
+          // No need to fetch, subscription handles it
         } else {
           alert(result.message);
         }
@@ -111,15 +107,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ isAdmin, onEdit, s
           <h1 className="text-2xl font-display font-bold text-slate-900">Notifications</h1>
           <p className="text-xs text-slate-500 font-medium">Stay updated with the latest news</p>
         </div>
-        {sheetConfig?.enabled && (
-          <button 
-            onClick={fetchNotifications} 
-            className="p-3 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl transition-all active:scale-95"
-            title="Refresh from Sheets"
-          >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
-        )}
+        {/* Refresh button removed as it's now real-time */}
       </div>
       
       {notifications.length === 0 ? (

@@ -60,52 +60,46 @@ export const Gallery: React.FC<GalleryProps> = ({ isAdmin, onEdit, sheetConfig }
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
 
-  const fetchGallery = async () => {
-    setLoading(true);
-    
-    if (sheetConfig?.enabled && sheetConfig.id) {
-      try {
-        const sheetData = await firebaseService.fetchCollection('Gallery');
-        
-        const mappedPhotos = sheetData
-          .filter(item => !item.type || item.type.toLowerCase() === 'photo')
-          .map((item, index) => ({
-            id: item.id,
-            title: item.title || 'No Title',
-            url: item.url || '',
-            description: item.description || '',
-            createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-            isFromSheet: false
-          }));
-
-        const mappedVideos = sheetData
-          .filter(item => item.type && item.type.toLowerCase() === 'video')
-          .map((item, index) => ({
-            id: item.id,
-            title: item.title || 'No Title',
-            url: item.url || '',
-            description: item.description || '',
-            createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
-            isFromSheet: false
-          }));
-        
-        setPhotos(mappedPhotos.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-        setVideos(mappedVideos.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-      } catch (err) {
-        console.error('Error fetching gallery data:', err);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setPhotos([]);
-      setVideos([]);
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchGallery();
-  }, [sheetConfig]);
+    let unsubscribe: (() => void) | undefined;
+
+    const setupSubscription = () => {
+      setLoading(true);
+      unsubscribe = firebaseService.subscribeToCollection('Gallery', (data) => {
+        const mappedPhotos = data
+          .filter(item => !item.type || item.type.toLowerCase() === 'photo')
+          .map((item) => ({
+            id: item.id,
+            title: item.title || 'No Title',
+            url: item.url || '',
+            description: item.description || '',
+            createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+            isFromSheet: false
+          }));
+
+        const mappedVideos = data
+          .filter(item => item.type && item.type.toLowerCase() === 'video')
+          .map((item) => ({
+            id: item.id,
+            title: item.title || 'No Title',
+            url: item.url || '',
+            description: item.description || '',
+            createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
+            isFromSheet: false
+          }));
+        
+        setPhotos(mappedPhotos);
+        setVideos(mappedVideos);
+        setLoading(false);
+      });
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   const handleDelete = async (id: string, col: string) => {
     setDeleteTarget({ id, col });
@@ -119,7 +113,7 @@ export const Gallery: React.FC<GalleryProps> = ({ isAdmin, onEdit, sheetConfig }
       if (item && item.id) {
         const result = await firebaseService.writeToCollection('delete', 'Gallery', { id: item.id });
         if (result.success) {
-          fetchGallery();
+          // Real-time subscription handles update
         } else {
           alert(result.message);
         }
@@ -145,15 +139,7 @@ export const Gallery: React.FC<GalleryProps> = ({ isAdmin, onEdit, sheetConfig }
           <h1 className="text-2xl font-display font-bold text-slate-800">Gallery</h1>
           <p className="text-[10px] text-brand-primary font-bold uppercase tracking-wider">Memories & Moments</p>
         </div>
-        {sheetConfig?.enabled && (
-          <button 
-            onClick={fetchGallery} 
-            className="h-10 w-10 flex items-center justify-center bg-white text-brand-primary border border-slate-200 rounded-xl shadow-sm active:scale-90 transition-transform"
-            title="Refresh from Sheets"
-          >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          </button>
-        )}
+        {/* Refresh button removed as it's now real-time */}
       </div>
       
       <div className="flex p-1 bg-slate-100 rounded-2xl">

@@ -65,7 +65,7 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       
       allow create: if isAuthenticated() && 
                     isValidUser(request.resource.data) && 

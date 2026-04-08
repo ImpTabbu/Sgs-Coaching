@@ -49,24 +49,28 @@ export const StudyContent: React.FC<StudyContentProps> = ({ selectedLevel, selec
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaTitle, setMediaTitle] = useState('');
 
-  const fetchMaterials = async () => {
-    setLoading(true);
-    
-    if (sheetConfig?.enabled && sheetConfig.id) {
-      try {
-        const sheetData = await firebaseService.fetchCollection('StudyMaterials');
-        const mappedSheetData = sheetData.filter((m: any) => 
-          (m.level || '').toLowerCase() === (selectedLevel || '').toLowerCase() && 
-          (m.classname || '').toString() === (selectedClass || '').toString() &&
-          (m.subject || '').toLowerCase() === (selectedSubject || '').toLowerCase()
-        ).map((item, index) => {
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    const setupSubscription = () => {
+      setLoading(true);
+      
+      // Filter by level, class, and subject to save reads!
+      const filters = [
+        { field: 'level', value: selectedLevel },
+        { field: 'classname', value: selectedClass },
+        { field: 'subject', value: selectedSubject }
+      ];
+
+      unsubscribe = firebaseService.subscribeToCollection('StudyMaterials', (data) => {
+        const mappedData = data.map((item) => {
           let parsedVideos = [];
           let parsedHomework = [];
           try { parsedVideos = item.videos ? (typeof item.videos === 'string' ? JSON.parse(item.videos) : item.videos) : []; } catch (e) { console.error('Error parsing videos', e); }
           try { parsedHomework = item.homeworkurls ? (typeof item.homeworkurls === 'string' ? JSON.parse(item.homeworkurls) : item.homeworkurls) : []; } catch (e) { console.error('Error parsing homework', e); }
           
           return {
-            id: `sheet-study-${index}`,
+            id: item.id,
             title: item.title || 'No Title',
             url: item.url || '',
             type: item.type || 'pdf',
@@ -77,22 +81,18 @@ export const StudyContent: React.FC<StudyContentProps> = ({ selectedLevel, selec
             createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
             isFromSheet: false
           };
-        }).sort((a, b) => a.createdAt.toDate().getTime() - b.createdAt.toDate().getTime());
-        setMaterials(mappedSheetData);
-      } catch (err) {
-        console.error('Error fetching sheet data:', err);
-      } finally {
+        });
+        setMaterials(mappedData);
         setLoading(false);
-      }
-    } else {
-      setMaterials([]);
-      setLoading(false);
-    }
-  };
+      }, filters);
+    };
 
-  useEffect(() => {
-    fetchMaterials();
-  }, [selectedLevel, selectedClass, selectedSubject, sheetConfig]);
+    setupSubscription();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [selectedLevel, selectedClass, selectedSubject]);
 
   const handleMaterialClick = (e: React.MouseEvent, material: any) => {
     e.preventDefault();
@@ -147,7 +147,7 @@ export const StudyContent: React.FC<StudyContentProps> = ({ selectedLevel, selec
       if (item && item.id) {
         const result = await firebaseService.writeToCollection('delete', 'StudyMaterials', { id: item.id });
         if (result.success) {
-          fetchMaterials();
+          // Real-time subscription handles update
         } else {
           alert(result.message);
         }
@@ -192,15 +192,7 @@ export const StudyContent: React.FC<StudyContentProps> = ({ selectedLevel, selec
           >
             <ArrowLeft size={24} />
           </motion.button>
-          {sheetConfig?.enabled && (
-            <button 
-              onClick={fetchMaterials} 
-              className="p-3 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl transition-all active:scale-95"
-              title="Refresh from Sheets"
-            >
-              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-            </button>
-          )}
+        {/* Refresh button removed as it's now real-time */}
         </div>
 
         <div className="space-y-1">
