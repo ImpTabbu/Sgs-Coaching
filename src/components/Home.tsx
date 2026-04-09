@@ -439,22 +439,28 @@ export const Home: React.FC = () => {
             View All <ArrowRight size={12} />
           </button>
         </div>
-        <div className="rounded-2xl overflow-hidden h-56 shadow-sm border border-slate-100">
+        <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-100">
           <Swiper
-            modules={[Autoplay, EffectFade, Pagination]}
-            loop={true}
-            autoplay={{ delay: 5000, disableOnInteraction: false }}
-            effect="fade"
+            modules={[Autoplay, Pagination]}
+            loop={teachers.length > 1}
+            autoplay={{ delay: 4000, disableOnInteraction: false }}
             pagination={{ clickable: true }}
-            className="h-full"
+            spaceBetween={12}
+            slidesPerView={1.2}
+            breakpoints={{
+              640: { slidesPerView: 2.2 },
+              1024: { slidesPerView: 3.2 }
+            }}
+            className="pb-8"
           >
             {teachers.length > 0 ? teachers.map((teacher, i) => (
-              <SwiperSlide key={i}>
-                <div className="relative h-full w-full">
-                  <img src={teacher.imageurl} alt={teacher.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                    <p className="text-white font-bold text-sm">{teacher.name}</p>
-                    <p className="text-white/80 text-[10px]">{teacher.subject} • {teacher.designation}</p>
+              <SwiperSlide key={i} className="h-64">
+                <div className="relative h-full w-full rounded-2xl overflow-hidden group">
+                  <img src={teacher.imageurl} alt={teacher.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4">
+                    <p className="text-white font-bold text-base leading-tight">{teacher.name}</p>
+                    <p className="text-white/90 text-xs font-medium mt-1">{teacher.subject}</p>
+                    <p className="text-white/70 text-[10px] uppercase tracking-wider mt-0.5">{teacher.designation}</p>
                   </div>
                 </div>
               </SwiperSlide>

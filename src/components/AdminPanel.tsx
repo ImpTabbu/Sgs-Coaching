@@ -21,7 +21,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
   const [videos, setVideos] = useState<any[]>([]);
   const [tests, setTests] = useState<any[]>([]);
   const [testQuestions, setTestQuestions] = useState<any[]>([]);
-  const [testResults, setTestResults] = useState<any[]>([]);
   const [noticeBoard, setNoticeBoard] = useState<any[]>([]);
   const [prePrimaryContent, setPrePrimaryContent] = useState<any[]>([]);
   const [kahanis, setKahanis] = useState<any[]>([]);
@@ -146,7 +145,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
     { id: 'notification', label: 'Alerts', icon: Bell, color: 'text-brand-primary', bgColor: 'bg-brand-primary/10', roles: ['admin', 'teacher'] },
     { id: 'media', label: 'Gallery', icon: ImageIcon, color: 'text-purple-600', bgColor: 'bg-purple-50', roles: ['admin', 'teacher'] },
     { id: 'test_series', label: 'Test Series', icon: Sparkles, color: 'text-cyan-600', bgColor: 'bg-cyan-50', roles: ['admin', 'teacher'] },
-    { id: 'test_results', label: 'Results', icon: Award, color: 'text-indigo-600', bgColor: 'bg-indigo-50', roles: ['admin', 'teacher'] },
     { id: 'study', label: 'Study', icon: BookOpen, color: 'text-blue-600', bgColor: 'bg-blue-50', roles: ['admin', 'teacher'] },
     { id: 'topper', label: 'Toppers', icon: Award, color: 'text-rose-600', bgColor: 'bg-rose-50', roles: ['admin', 'teacher'] },
     { id: 'teachers', label: 'Teachers', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', roles: ['admin'] },
@@ -218,10 +216,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           isFromSheet: false
         })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
       } else if (activeTab === 'test_series') {
-        const [testsData, testQuestionsData, testResultsData] = await Promise.all([
+        const [testsData, testQuestionsData] = await Promise.all([
           firebaseService.fetchCollection('Tests'),
-          firebaseService.fetchCollection('TestQuestions'),
-          firebaseService.fetchCollection('TestResults')
+          firebaseService.fetchCollection('TestQuestions')
         ]);
         setTests(testsData.map((item: any) => ({
           id: item.id,
@@ -247,18 +244,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
           isFromSheet: false
         })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
-
-        setTestResults(testResultsData.map((item: any) => ({
-          id: item.id,
-          testId: item.testid || item.testId,
-          username: item.username || item.userId,
-          score: item.score,
-          total: item.totalmarks || item.totalMarks || item.total,
-          percentage: item.percentage,
-          timeTaken: item.timetaken,
-          completedAt: item.completedat ? { toDate: () => new Date(item.completedat) } : { toDate: () => new Date() },
-          isFromSheet: false
-        })).sort((a: any, b: any) => b.completedAt.toDate().getTime() - a.completedAt.toDate().getTime()));
       } else if (activeTab === 'notification') {
         const notificationsData = await firebaseService.fetchCollection('Notifications');
         setNotifications(notificationsData.map((item: any) => ({
@@ -327,7 +312,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           name: item.name,
           subject: item.subject,
           designation: item.designation,
-          imageUrl: item.imageurl,
+          imageurl: item.imageurl,
           createdAt: item.createdat ? { toDate: () => new Date(item.createdat) } : { toDate: () => new Date() },
           isFromSheet: false
         })).sort((a: any, b: any) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()));
@@ -824,7 +809,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
       else if (deleteTarget.col === 'users') item = users.find(u => u.id === deleteTarget.id);
       else if (deleteTarget.col === 'tests') item = tests.find(t => t.id === deleteTarget.id);
       else if (deleteTarget.col === 'test_questions') item = testQuestions.find(tq => tq.id === deleteTarget.id);
-      else if (deleteTarget.col === 'test_results') item = testResults.find(tr => tr.id === deleteTarget.id);
       else if (deleteTarget.col === 'notice') item = noticeBoard.find(n => n.id === deleteTarget.id);
       else if (deleteTarget.col === 'pre_primary_content') item = prePrimaryContent.find(p => p.id === deleteTarget.id);
       else if (deleteTarget.col === 'kahanis') item = kahanis.find(k => k.id === deleteTarget.id);
@@ -835,13 +819,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
           // Cascading delete for tests
           if (deleteTarget.col === 'tests') {
             const relatedQuestions = testQuestions.filter(q => q.testId === item.id);
-            const relatedResults = testResults.filter(r => r.testId === item.id);
             
             for (const q of relatedQuestions) {
               await firebaseService.writeToCollection('delete', 'TestQuestions', { id: q.id });
-            }
-            for (const r of relatedResults) {
-              await firebaseService.writeToCollection('delete', 'TestResults', { id: r.id });
             }
           }
 
@@ -1546,94 +1526,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ initialEdit, onClearInit
             </div>
           </div>
         )}
-      </motion.section>
-      )}
-
-      {/* Test Results Section */}
-      {activeTab === 'test_results' && (
-      <motion.section 
-        key="test_results"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -20, opacity: 0 }}
-        className="bg-white p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-indigo-600">
-            <div className="p-2 bg-indigo-50 rounded-xl">
-              <Award size={24} />
-            </div>
-            <h2 className="text-xl font-black tracking-tight">Test Performance</h2>
-          </div>
-          <button 
-            onClick={() => setActiveTab(null)}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-          >
-            <X size={20} className="text-slate-400" />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div className="overflow-x-auto no-scrollbar">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student</th>
-                  <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Test</th>
-                  <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Score</th>
-                  <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Time</th>
-                  <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                  <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {testResults.sort((a, b) => b.completedAt.toDate().getTime() - a.completedAt.toDate().getTime()).map((res) => {
-                  const test = tests.find(t => t.id === res.testId);
-                  return (
-                    <tr key={res.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
-                            {res.username?.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="font-bold text-slate-700 text-sm">{res.username}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm font-medium text-slate-600">{test?.title || 'Unknown Test'}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-black text-slate-800">{res.score}/{res.total}</span>
-                          <span className={`text-[10px] font-bold ${parseFloat(res.percentage) >= 40 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {res.percentage}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-xs font-medium text-slate-500">{res.timeTaken}s</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-xs font-medium text-slate-500">{res.completedAt.toDate().toLocaleDateString()}</span>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <button 
-                          onClick={() => handleDelete(res.id, 'test_results')}
-                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {testResults.length === 0 && (
-              <div className="text-center py-12 text-slate-400 italic text-sm">No test results recorded yet.</div>
-            )}
-          </div>
-        </div>
       </motion.section>
       )}
 

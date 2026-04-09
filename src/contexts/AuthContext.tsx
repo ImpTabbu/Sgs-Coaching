@@ -57,11 +57,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               setUser(null);
             }
           } else {
-            // Profile fetch failed (could be offline)
-            // If we already have a session in localStorage, trust it for offline use
+            // Profile fetch failed (could be offline or slow network)
+            const cachedName = localStorage.getItem('username');
+            const cachedRole = localStorage.getItem('userRole');
             const wasLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            if (wasLoggedIn) {
+
+            if (wasLoggedIn && cachedName && cachedRole) {
               console.log("Offline mode: Using cached session");
+              setUser({ name: cachedName, role: cachedRole });
               setIsLoggedIn(true);
               setIsPending(false);
             } else {
@@ -75,7 +78,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } catch (error) {
           console.error("Auth state error:", error);
           // On error, if we have a cached session, keep it
-          if (localStorage.getItem('isLoggedIn') === 'true') {
+          const cachedName = localStorage.getItem('username');
+          const cachedRole = localStorage.getItem('userRole');
+          if (localStorage.getItem('isLoggedIn') === 'true' && cachedName && cachedRole) {
+            setUser({ name: cachedName, role: cachedRole });
             setIsLoggedIn(true);
           } else {
             setIsLoggedIn(false);

@@ -29,13 +29,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       
-      // Check if user exists in our Firestore
-      const users = await firebaseService.fetchCollection('Users');
-      const existingUser = users.find(u => u.email === user.email);
+      // Check if user exists in our Firestore using UID (much more efficient than fetching collection)
+      const profileRes = await firebaseService.getUserProfile(user.uid);
 
-      if (existingUser) {
+      if (profileRes.success && profileRes.data) {
+        const existingUser = profileRes.data;
         if (existingUser.active) {
-          onLogin(existingUser.username || existingUser.name, existingUser.role);
+          // The AuthContext will handle the state update via onAuthStateChanged
+          // We just need to wait for it or trigger a refresh if needed
         } else {
           setStep('pending');
         }
